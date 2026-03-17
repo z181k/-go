@@ -33,20 +33,7 @@ Public Class EWV2webpage
             End
         End Try
 
-        '
-        Dim ScreenHeight As Integer = Screen.PrimaryScreen.Bounds.Height
-        Dim ScreenWidth As Integer = Screen.PrimaryScreen.Bounds.Width
-        If ScreenWidth > 2500 And ScreenHeight > 1400 Then
-            Me.Size = New Size(2000, 1200)
-        ElseIf ScreenWidth > 2000 And ScreenHeight > 1000 Then
-            Me.Size = New Size(1400, 850)
-        ElseIf ScreenWidth > 1400 And ScreenHeight > 1000 Then
-            Me.Size = New Size(900, 700)
-        ElseIf ScreenWidth > 1000 And ScreenHeight > 700 Then
-            Me.Size = New Size(750, 500)
-        ElseIf ScreenWidth > 799 And ScreenHeight > 599 Then
-            Me.Size = New Size(600, 400)
-        End If
+
 
         WebView21.CoreWebView2.Settings.AreDevToolsEnabled = False
         WebView21.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = False
@@ -87,6 +74,7 @@ Public Class EWV2webpage
             WebView21.Width = Me.Width - 75
             WebView21.Height = Me.Height - 192
         End If
+        Timer1.Start()
     End Sub
     Private Sub OnNewWindowRequested(sender As Object, e As CoreWebView2NewWindowRequestedEventArgs)
         e.Handled = True
@@ -95,5 +83,24 @@ Public Class EWV2webpage
 
     Private Sub WebView21_CoreWebView2InitializationCompleted(sender As Object, e As CoreWebView2InitializationCompletedEventArgs) Handles WebView21.CoreWebView2InitializationCompleted
         AddHandler WebView21.CoreWebView2.NewWindowRequested, AddressOf OnNewWindowRequested
+    End Sub
+
+    Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles Timer1.Tick
+        '
+        Dim ScreenHeight As Integer = Screen.PrimaryScreen.Bounds.Height
+        Dim ScreenWidth As Integer = Screen.PrimaryScreen.Bounds.Width
+        If ScreenWidth > 2500 And ScreenHeight > 1400 Then
+            Me.Size = New Size(2000, 1200)
+        ElseIf ScreenWidth > 2000 And ScreenHeight > 1000 Then
+            Me.Size = New Size(1400, 850)
+        ElseIf ScreenWidth > 1400 And ScreenHeight > 1000 Then
+            Me.Size = New Size(900, 700)
+        ElseIf ScreenWidth > 1000 And ScreenHeight > 700 Then
+            Me.Size = New Size(750, 500)
+        ElseIf ScreenWidth > 799 And ScreenHeight > 599 Then
+            Me.Size = New Size(600, 400)
+        End If
+        Me.FormBorderStyle = FormBorderStyle.Sizable
+        Panel1.Visible = False
     End Sub
 End Class
