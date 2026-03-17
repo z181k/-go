@@ -47,6 +47,9 @@ Public Class EWV2webpage
         ElseIf ScreenWidth > 799 And ScreenHeight > 599 Then
             Me.Size = New Size(600, 400)
         End If
+
+        WebView21.CoreWebView2.Settings.AreDevToolsEnabled = False
+        WebView21.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = False
     End Sub
 
     Private Sub HelpEWV2_sizechange(ByVal sender As Object, ByVal e As EventArgs) Handles MyBase.SizeChanged
@@ -85,5 +88,12 @@ Public Class EWV2webpage
             WebView21.Height = Me.Height - 192
         End If
     End Sub
+    Private Sub OnNewWindowRequested(sender As Object, e As CoreWebView2NewWindowRequestedEventArgs)
+        e.Handled = True
+        WebView21.CoreWebView2.Navigate(e.Uri)
+    End Sub
 
+    Private Sub WebView21_CoreWebView2InitializationCompleted(sender As Object, e As CoreWebView2InitializationCompletedEventArgs) Handles WebView21.CoreWebView2InitializationCompleted
+        AddHandler WebView21.CoreWebView2.NewWindowRequested, AddressOf OnNewWindowRequested
+    End Sub
 End Class
