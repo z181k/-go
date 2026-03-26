@@ -1,732 +1,7 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全国景区地图系统</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
-        }
-        
-        body {
-            background-color: #f5f5f5;
-            color: #333;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        .container {
-            display: flex;
-            height: 100vh;
-            width: 100%; /* 确保容器占满宽度 */
-        }
-        
-        /* 侧边栏样式 */
-        .sidebar {
-            width: 380px;
-            background-color: #fff;
-            border-right: 1px solid #ddd;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-            z-index: 1000;
-            transition: width 0.3s ease, height 0.3s ease;
-            flex-shrink: 0; /* 防止侧边栏被挤压 */
-        }
-        
-        /* 侧边栏隐藏样式 */
-        .sidebar.hidden {
-            width: 0;
-            overflow: hidden;
-            border-right: none;
-            flex-shrink: 0;
-        }
-        
-        .header {
-            padding: 20px;
-            background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%);
-            color: white;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        
-        /* 登录界面 */
-        .login-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            height: 100%;
-            padding: 20px;
-        }
-        
-        .login-box {
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .login-box h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            color: #1a6dcc;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        
-        .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-        
-        .form-group input:focus {
-            border-color: #1a6dcc;
-            outline: none;
-        }
-        
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #1a6dcc;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .login-btn:hover {
-            background-color: #0d4d9c;
-        }
-        
-        .error-message {
-            color: #e74c3c;
-            margin-top: 10px;
-            text-align: center;
-            font-size: 14px;
-            display: none;
-        }
-        
-        /* 主界面 */
-        .main-interface {
-            display: none;
-            height: 100%;
-            flex-direction: column;
-        }
-        
-        .user-info {
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .user-info span {
-            font-weight: bold;
-            color: #1a6dcc;
-        }
-        
-        .logout-btn {
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .logout-btn:hover {
-            background-color: #c0392b;
-        }
-        
-        /* 搜索框样式 */
-        .search-box {
-            margin-bottom: 20px;
-            position: relative;
-        }
-        
-        .search-box input {
-            width: 100%;
-            padding: 12px 15px;
-            padding-right: 40px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        
-        .search-box button {
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #1a6dcc;
-            font-size: 18px;
-            cursor: pointer;
-        }
-        
-        .search-results {
-            position: absolute;
-            width: 100%;
-            max-height: 300px;
-            overflow-y: auto;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            z-index: 1000;
-            display: none;
-            top: 100%;
-            margin-top: 4px;
-        }
-        
-        .search-result-item {
-            padding: 12px 15px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .search-result-item:hover {
-            background-color: #f5f9ff;
-            padding-left: 18px;
-        }
-        
-        .search-result-item h4 {
-            font-size: 16px;
-            margin-bottom: 5px;
-            color: #1a6dcc;
-        }
-        
-        .search-result-item p {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .no-results {
-            padding: 24px 15px;
-            text-align: center;
-            color: #666;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        
-        .web-search-recommend {
-            padding: 18px 15px;
-            background: linear-gradient(135deg, #f0f8ff 0%, #e8f4f8 100%);
-            border-radius: 0 0 8px 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .web-search-recommend:hover {
-            background: linear-gradient(135deg, #e8f4f8 0%, #d8eaf7 100%);
-        }
-        
-        .web-search-recommend .recommend-title {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: #1a6dcc;
-            font-weight: 500;
-            margin-bottom: 0;
-        }
-        
-        .web-search-recommend .recommend-title i {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            background-color: #1a6dcc;
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 20px;
-            font-size: 12px;
-            margin-right: 8px;
-        }
-        
-        /* 筛选器样式 */
-        .filters {
-            margin-bottom: 20px;
-        }
-        
-        .filter-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-            display: flex;
-            align-items: center;
-        }
-        
-        .filter-title i {
-            margin-right: 8px;
-            color: #1a6dcc;
-        }
-        
-        .filter-options {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .filter-btn {
-            padding: 8px 15px;
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        
-        .filter-btn.active {
-            background-color: #1a6dcc;
-            color: white;
-            border-color: #a5cc1a;
-        }
-        
-        .filter-btn:hover {
-            background-color: #e0e0e0;
-        }
-        
-        .filter-btn.active:hover {
-            background-color: #0d4d9c;
-        }
-        
-        .recommend-filter {
-            margin-top: 20px;
-        }
-        
-        .slider-container {
-            padding: 0 5px;
-        }   
-        
-        .slider-value {
-            text-align: center;
-            margin-top: 10px;
-            font-weight: bold;
-            color: #1a6dcc;
-        }
-        
-        /* 景区列表样式 */
-        .scenic-list {
-            flex: 1;
-            overflow-y: auto;
-        }
-        
-        .list-title {
-            font-weight: bold;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #1a6dcc;
-            color: #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .scenic-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        .scenic-item:hover {
-            background-color: #f9f9f9;
-        }
-        
-        .scenic-item h4 {
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: #1a6dcc;
-        }
-        
-        .scenic-type {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-right: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .type-5a {
-            background-color: #ff6b6b;
-            color: white;
-        }
-        
-        .type-4a {
-            background-color: #4ecdc4;
-            color: white;
-        }
-        
-        .type-ancient {
-            background-color: #ffd166;
-            color: #333;
-        }
-        
-        .scenic-address {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 8px;
-        }
-        
-        .scenic-description {
-            font-size: 14px;
-            color: #888;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        /* 地图容器样式 - 核心修复 */
-        .map-container {
-            flex: 1; /* 关键：自动填充剩余空间 */
-            position: relative;
-            height: 100%;
-            width: 100%;
-            transition: all 0.3s ease; /* 过渡动画 */
-            min-width: 0; /* 防止flex容器宽度溢出 */
-        }
-        
-        #map {
-            height: 100%;
-            width: 100%;
-            min-width: 0;
-        }
-        
-        /* 地图控件样式 */
-        .map-controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .control-btn {
-            width: 40px;
-            height: 40px;
-            background-color: white;
-            border: none;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 20px;
-            color: #333;
-            transition: all 0.2s;
-        }
-        
-        .control-btn:hover {
-            background-color: #f5f5f5;
-            transform: translateY(-2px);
-        }
-        
-        /* 信息窗口样式 */
-        .custom-popup {
-            max-width: 300px;
-        }
-        
-        .popup-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #1a6dcc;
-        }
-        
-        .popup-type {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-        
-        .popup-address, .popup-year, .popup-description {
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        
-        .popup-year {
-            font-weight: bold;
-            color: #d35400;
-        }
-        
-        .popup-description {
-            line-height: 1.4;
-            color: #666;
-        }
-        
-        /* 比例尺样式 */
-        .leaflet-control-scale {
-            margin-bottom: 20px !important;
-            margin-left: 20px !important;
-        }
-        
-        /* 景区标记样式 - 适配文字显示 */
-        .scenic-marker {
-            background: #1a6dcc;
-            min-width: 60px;
-            max-width: 100px;
-            height: 30px;
-            border-radius: 15px;
-            border: 2px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 8px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .marker-text {
-            font-size: 11px;
-            font-weight: bold;
-            color: white;
-            text-align: center;
-        }
-        
-        /* 响应式设计 */
-        @media (max-width: 992px) {
-            .container {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                height: 40%;
-                border-right: none;
-                border-bottom: 1px solid #ddd;
-            }
-            
-            .sidebar.hidden {
-                height: 0;
-                border-bottom: none;
-            }
-            
-            .map-container {
-                height: 60%;
-                width: 100%;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .sidebar {
-                height: 50%;
-            }
-            
-            .map-container {
-                height: 50%;
-            }
-            
-            .content {
-                padding: 15px;
-            }
-            
-            .header h1 {
-                font-size: 20px;
-            }
-            
-            .filter-options {
-                justify-content: center;
-            }
-        }
 
-        /* 侧边栏切换按钮样式 */
-        .sidebar-toggle-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1001;
-            width: 40px;
-            height: 40px;
-            background-color: white;
-            border: none;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 20px;
-            color: #333;
-            transition: all 0.2s;
-        }
-        
-        .sidebar-toggle-btn:hover {
-            background-color: #f5f5f5;
-            transform: translateY(-2px);
-        }
-    </style>
-</head>
-<body>
-    <!-- 侧边栏切换按钮 -->
-    <button class="sidebar-toggle-btn" id="sidebarToggleBtn">☰</button>
-
-    <div class="container">
-        <!-- 侧边栏 -->
-        <div class="sidebar" id="sidebar">
-            <div class="header">
-                <h1>全国景区地图系统</h1>
-                <p>探索中国5A/4A级景区与古建遗迹</p>
-            </div>
-            
-            <!-- 登录界面 -->
-            <div class="login-container" id="loginContainer">
-                <div class="login-box">
-                    <h2>用户登录</h2>
-                    <div class="form-group">
-                        <label for="username">账号</label>
-                        <input type="text" id="username" placeholder="请输入账号">
-                    </div>
-                    <div class="form-group">
-                        <label for="password">密码</label>
-                        <input type="password" id="password" placeholder="请输入密码">
-                    </div>
-                    <button class="login-btn" id="loginBtn">登录</button>
-                    <div class="error-message" id="errorMessage">账号或密码错误！</div>
-                    
-                    <!-- 登陆界面提示 -->
-                    <div style="margin-top: 15px; font-size: 14px; color: #666; text-align: center;">
-                        <p>测试版本请勿私自登录</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 主界面 -->
-            <div class="main-interface" id="mainInterface">
-                <div class="user-info">
-                    <div>欢迎, <span id="loggedInUser">tbbtz</span></div>
-                    <button class="logout-btn" id="logoutBtn">退出登录</button>
-                </div>
-                
-                <div class="content">
-                    <!-- AI 助手界面 -->
-                    <div class="ai-assistant-box" style="margin-bottom: 20px; border: 1px solid #1a6dcc; border-radius: 8px; overflow: hidden; background: #fff;">
-                        <div style="background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%); color: white; padding: 10px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
-                            <span><i class="fas fa-robot"></i> DeepSeek 智能导游</span>
-                            <span id="aiStatus" style="font-size: 12px; opacity: 0.8;">在线</span>
-                        </div>
-                        <div id="aiChatHistory" style="max-height: 150px; overflow-y: auto; padding: 10px; font-size: 13px; background: #f9f9f9; border-bottom: 1px solid #eee;">
-                            <div style="color: #666;">您好！我是您的智能导游，可以问我关于景区的历史、攻略或路线建议。</div>
-                        </div>
-                        <div style="display: flex; padding: 8px; background: #fff;">
-                            <input type="text" id="aiInput" placeholder="输入问题..." style="flex: 1; border: 1px solid #ddd; padding: 6px 10px; border-radius: 4px; outline: none; font-size: 13px;">
-                            <button id="sendAiBtn" style="margin-left: 8px; background: #1a6dcc; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;">提问</button>
-                        </div>
-                    </div>
-                    
-                    <!-- 搜索框 -->
-                    <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="搜索景区名称或地址...">
-                        <button id="searchBtn">🔍</button>
-                        <div class="search-results" id="searchResults"></div>
-                    </div>
-                    
-                    <!-- 筛选器 -->
-                    <div class="filters">
-                        <div class="filter-title">
-                            <i>📍</i> 景区类型筛选
-                        </div>
-                        <div class="filter-options" id="typeFilters">
-                            <button class="filter-btn active" data-type="all">全部显示</button>
-                            <button class="filter-btn" data-type="5A">5A级景区</button>
-                            <button class="filter-btn" data-type="4A">4A级景区</button>
-                            <button class="filter-btn" data-type="古建">古建筑</button>
-                        </div>
-                        
-                        <div class="recommend-filter">
-                            <div class="filter-title">
-                                <i>⭐</i> 推荐度筛选 (≥ <span id="recommendValue">5</span>)
-                            </div>
-                            <div class="slider-container">
-                                <input type="range" id="recommendSlider" min="1" max="10" value="5" step="1">
-                                <div class="slider-value">推荐度 ≥ <span id="sliderValue">5</span></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 景区列表 -->
-                    <div class="scenic-list">
-                        <div class="list-title">
-                            <span>景区列表</span>
-                            <span id="resultCount">0</span>个
-                        </div>
-                        <div id="scenicListContainer"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 地图容器 -->
-        <div class="map-container">
-            <div id="map"></div>
-            
-            <!-- 地图控件 -->
-            <div class="map-controls">
-                <button class="control-btn" id="zoomInBtn" title="放大">+</button>
-                <button class="control-btn" id="zoomOutBtn" title="缩小">-</button>
-                <button class="control-btn" id="resetViewBtn" title="重置视图">↺</button>
-                <button class="control-btn" id="locateChinaBtn" title="定位到中国">🇨🇳</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
         // 景区数据
         const scenicData5A = [
-             { name: "故宫博物院", type: "5A级景区", address: "北京市，东城区", lng: 116.397026, lat: 39.918058, description: "明清两代皇家宫殿，世界文化遗产。", recommend: 10 },
+            { name: "故宫博物院", type: "5A级景区", address: "北京市，东城区", lng: 116.397026, lat: 39.918058, description: "明清两代皇家宫殿，世界文化遗产。", recommend: 10 },
   { name: "天坛公园", type: "5A级景区", address: "北京市，东城区", lng: 116.410829, lat: 39.88194, description: "明清皇帝祭天场所，中国古建筑瑰宝。", recommend: 9 },
   { name: "颐和园", type: "5A级景区", address: "北京市，海淀区", lng: 116.273946, lat: 39.992806, description: "保存最完整的皇家园林，皇家园林博物馆。", recommend: 10 },
   { name: "八达岭 — 慕田峪长城旅游区", type: "5A级景区", address: "北京市，延庆区", lng: 116.020067, lat: 40.355298, description: "万里长城的杰出代表，气势磅礴。", recommend: 10 },
@@ -1131,15 +406,6 @@
         ];
         
         const scenicData4A = [
-           {
-        name: "晋祠天龙山景区",
-        type: "5A级景区",
-        address: "山西省太原市晋源区",
-        lng: 112.447986,
-        lat: 37.715389,
-        description: "集晋祠古建筑群与天龙山石窟于一体的国家级历史文化景区。",
-        recommend: 10
-    },
     {
         name: "汾河景区",
         type: "4A级景区",
@@ -13395,10 +12661,908 @@
     { name: "金昌紫金花城景区", type: "4A级景区", address: "甘肃省金昌市", lng: 102.1876, lat: 38.5123, description: "浪漫的紫色花海，城市景观新名片。", recommend: 6 },
     { name: "庆阳周祖陵景区", type: "4A级景区", address: "甘肃省庆阳市庆城县", lng: 107.8876, lat: 36.0123, description: "周文化发祥地，祭祀周先祖不窋的圣地。", recommend: 7 },
 
-        ];
+    // 青海省4A级景区数据模板
+
+{ name: "西宁野生动物园", type: "4A级景区", address: "青海省西宁市城西区", lng: 101.768, lat: 36.627, description: "青藏高原唯一的大型野生动物园，展示雪豹、藏羚羊等珍稀高原动物，科普与观光兼具", recommend: 8 },
+{ name: "青海湖二郎剑景区", type: "4A级景区", address: "青海省海南藏族自治州共和县", lng: 100.857, lat: 36.603, description: "青海湖核心景区，可近距离观赏湖光山色，体验藏族民俗，是青海湖观光首选", recommend: 10 },
+{ name: "格尔木昆仑旅游区", type: "4A级景区", address: "青海省海西蒙古族藏族自治州格尔木市", lng: 94.897, lat: 36.407, description: "昆仑文化核心景区，涵盖昆仑山口、昆仑神泉等景点，展现昆仑山脉雄浑风貌", recommend: 9 },
+{ name: "互助土族故土园", type: "4A级景区", address: "青海省海东市互助土族自治县", lng: 102.078, lat: 36.847, description: "集中展示土族民俗文化，有土族庄园、歌舞表演，体验独特的土族风情", recommend: 8 },
+{ name: "贵德国家地质公园", type: "4A级景区", address: "青海省海南藏族自治州贵德县", lng: 101.478, lat: 36.037, description: "以丹霞地貌为核心，七彩丹霞与黄河风光交融，地质科普与观光价值极高", recommend: 9 },
+{ name: "青海湖景区", type: "4A级景区", address: "青海省海南藏族自治州共和县", lng: 100.667, lat: 36.947, description: "中国最大内陆湖，高原蓝宝石，湖光山色与草原、雪山相映，自然风光绝美", recommend: 10 },
+{ name: "塔尔寺", type: "4A级景区", address: "青海省西宁市湟中区", lng: 101.578, lat: 36.497, description: "藏传佛教格鲁派六大寺院之一，酥油花、壁画、堆绣被誉为“塔尔寺三绝”", recommend: 10 },
+{ name: "海东瞿昙寺景区", type: "4A级景区", address: "青海省海东市乐都区", lng: 102.478, lat: 36.477, description: "明代皇家寺院，藏汉结合建筑风格，历史文化底蕴深厚，宗教与人文观光佳选", recommend: 8 },
+{ name: "海北祁连山草原景区", type: "4A级景区", address: "青海省海北藏族自治州祁连县", lng: 100.247, lat: 38.177, description: "中国最美六大草原之一，草原辽阔，雪山映衬，是放牧、摄影的胜地", recommend: 9 },
+{ name: "黄南热贡文化生态保护区", type: "4A级景区", address: "青海省黄南藏族自治州同仁市", lng: 102.007, lat: 35.527, description: "热贡艺术发源地，唐卡、堆绣、泥塑等非遗文化浓郁，是藏传佛教艺术宝库", recommend: 9 },
+{ name: "果洛年保玉则景区", type: "4A级景区", address: "青海省果洛藏族自治州久治县", lng: 101.078, lat: 33.357, description: "三江源核心景区，神山圣湖交织，是徒步、摄影的秘境，生态价值极高", recommend: 9 },
+{ name: "玉树文成公主庙景区", type: "4A级景区", address: "青海省玉树藏族自治州玉树市", lng: 97.178, lat: 33.007, description: "纪念文成公主入藏，藏汉民族团结象征，庙宇古朴，文化底蕴深厚", recommend: 8 },
+{ name: "海西茶卡盐湖景区", type: "4A级景区", address: "青海省海西蒙古族藏族自治州乌兰县", lng: 99.097, lat: 36.787, description: "中国“天空之镜”，盐湖镜面效果震撼，是网红打卡与摄影胜地", recommend: 10 },
+{ name: "海东循化撒拉族绿色家园", type: "4A级景区", address: "青海省海东市循化撒拉族自治县", lng: 102.578, lat: 35.847, description: "撒拉族聚居区，展现撒拉族民俗文化，黄河沿岸风光秀美，体验撒拉族生活", recommend: 7 },
+{ name: "海北原子城景区", type: "4A级景区", address: "青海省海北藏族自治州海晏县", lng: 100.978, lat: 36.977, description: "中国第一个核武器研制基地旧址，红色教育与核工业科普基地", recommend: 9 },
+
+// 新疆维吾尔自治区4A级景区数据模板
+
+{ name: "乌鲁木齐天山野生动物园", type: "4A级景区", address: "新疆维吾尔自治区乌鲁木齐市达坂城区", lng: 87.678, lat: 43.627, description: "西北最大野生动物园，展示新疆特有野生动物，如普氏野马、雪豹等，科普与观光兼具", recommend: 8 },
+{ name: "吐鲁番葡萄沟景区", type: "4A级景区", address: "新疆维吾尔自治区吐鲁番市高昌区", lng: 89.178, lat: 42.977, description: "葡萄种植核心区，夏季葡萄挂满枝头，体验维吾尔族民俗与葡萄文化", recommend: 9 },
+{ name: "喀什艾提尕尔清真寺", type: "4A级景区", address: "新疆维吾尔自治区喀什地区喀什市", lng: 75.997, lat: 39.477, description: "中国最大清真寺之一，伊斯兰建筑典范，是喀什穆斯林宗教活动中心", recommend: 9 },
+{ name: "伊犁那拉提草原", type: "4A级景区", address: "新疆维吾尔自治区伊犁哈萨克自治州新源县", lng: 84.078, lat: 43.427, description: "空中草原景观，雪山、森林、草原交织，是伊犁河谷最美草原之一", recommend: 10 },
+{ name: "阿勒泰可可托海景区", type: "4A级景区", address: "新疆维吾尔自治区阿勒泰地区富蕴县", lng: 89.827, lat: 47.227, description: "地质奇观与矿山文化结合，有可可托海国家地质公园，是地质科普胜地", recommend: 9 },
+{ name: "阿克苏天山神秘大峡谷景区", type: "4A级景区", address: "新疆维吾尔自治区阿克苏地区库车市", lng: 82.827, lat: 41.777, description: "红色峡谷地貌，峡谷幽深，岩壁纹理奇特，是中国十大最美峡谷之一", recommend: 9 },
+{ name: "巴音郭楞蒙古自治州博斯腾湖景区", type: "4A级景区", address: "新疆维吾尔自治区巴音郭楞蒙古自治州博湖县", lng: 87.027, lat: 41.977, description: "中国最大内陆淡水湖，湖光与芦苇荡、沙漠交织，是观鸟、水上娱乐胜地", recommend: 9 },
+{ name: "克孜勒苏柯尔克孜自治州慕士塔格峰景区", type: "4A级景区", address: "新疆维吾尔自治区克孜勒苏柯尔克孜自治州阿克陶县", lng: 75.027, lat: 38.277, description: "“冰山之父”慕士塔格峰，雪山与喀拉库勒湖相映，是帕米尔高原标志性景观", recommend: 10 },
+{ name: "昌吉回族自治州天山天池景区", type: "4A级景区", address: "新疆维吾尔自治区昌吉回族自治州阜康市", lng: 88.127, lat: 43.877, description: "高山湖泊景观，雪山倒映湖中，是新疆标志性自然景观，道教文化浓郁", recommend: 10 },
+{ name: "哈密五堡魔鬼城景区", type: "4A级景区", address: "新疆维吾尔自治区哈密市伊州区", lng: 93.278, lat: 42.627, description: "雅丹地貌核心区，风蚀地貌奇特，被称为“魔鬼城”，是摄影与探险胜地", recommend: 8 },
+{ name: "和田昆仑湖景区", type: "4A级景区", address: "新疆维吾尔自治区和田地区和田市", lng: 79.927, lat: 37.127, description: "城市湖泊公园，展现和田绿洲风光，是市民休闲、观光的好去处", recommend: 7 },
+{ name: "塔城巴克图口岸景区", type: "4A级景区", address: "新疆维吾尔自治区塔城地区塔城市", lng: 82.978, lat: 46.727, description: "中哈边境口岸，体验边境风情，展现边疆贸易与文化交流", recommend: 7 },
+{ name: "吐鲁番火焰山景区", type: "4A级景区", address: "新疆维吾尔自治区吐鲁番市高昌区", lng: 89.527, lat: 42.927, description: "中国最热的地方，红色砂岩山体形似火焰，《西游记》文化IP浓厚", recommend: 8 },
+{ name: "喀什噶尔老城景区", type: "4A级景区", address: "新疆维吾尔自治区喀什地区喀什市", lng: 75.997, lat: 39.477, description: "保存完整的维吾尔族老城，街巷纵横，民俗文化浓郁，是喀什灵魂所在", recommend: 10 },
+{ name: "伊犁喀拉峻景区", type: "4A级景区", address: "新疆维吾尔自治区伊犁哈萨克自治州特克斯县", lng: 82.727, lat: 43.127, description: "立体草原景观，草原、森林、峡谷、雪山交织，被称为“人体草原”", recommend: 10 },
+{ name: "阿勒泰喀纳斯景区", type: "4A级景区", address: "新疆维吾尔自治区阿勒泰地区布尔津县", lng: 87.027, lat: 48.727, description: "人间仙境，湖水随季节变色，周边白桦林、图瓦人村落，是新疆最美秘境", recommend: 10 },
+{ name: "阿克苏温宿大峡谷景区", type: "4A级景区", address: "新疆维吾尔自治区阿克苏地区温宿县", lng: 80.727, lat: 41.327, description: "峡谷与丹霞地貌结合，岩壁色彩丰富，是徒步、摄影的探险胜地", recommend: 8 },
+{ name: "巴音郭楞蒙古自治州楼兰古城景区", type: "4A级景区", address: "新疆维吾尔自治区巴音郭楞蒙古自治州若羌县", lng: 89.827, lat: 40.427, description: "古楼兰国遗址，沙漠中的历史遗迹，展现丝绸之路文明兴衰", recommend: 8 },
+{ name: "克孜勒苏柯尔克孜自治州白沙湖景区", type: "4A级景区", address: "新疆维吾尔自治区克孜勒苏柯尔克孜自治州阿克陶县", lng: 75.227, lat: 38.427, description: "高原湖泊，湖水湛蓝，周边白沙山环绕，是帕米尔高原网红打卡点", recommend: 9 },
+{ name: "昌吉回族自治州江布拉克景区", type: "4A级景区", address: "新疆维吾尔自治区昌吉回族自治州奇台县", lng: 90.327, lat: 43.727, description: "麦田与草原交织，秋季麦浪金黄，是新疆田园风光代表", recommend: 8 },
+{ name: "哈密回王府景区", type: "4A级景区", address: "新疆维吾尔自治区哈密市伊州区", lng: 93.478, lat: 42.827, description: "清代哈密回王府邸，融合中原与伊斯兰建筑风格，展现哈密回王历史", recommend: 7 },
+{ name: "和田团城景区", type: "4A级景区", address: "新疆维吾尔自治区和田地区和田市", lng: 79.978, lat: 37.127, description: "维吾尔族传统民居街区，展现和田民俗文化，是体验南疆生活的好去处", recommend: 7 },
+{ name: "塔城裕民巴尔鲁克山景区", type: "4A级景区", address: "新疆维吾尔自治区塔城地区裕民县", lng: 82.927, lat: 45.927, description: "山地草原景观，山花烂漫，是“小白杨”歌曲发源地，生态与人文结合", recommend: 7 },
+{ name: "乌鲁木齐水磨沟景区", type: "4A级景区", address: "新疆维吾尔自治区乌鲁木齐市水磨沟区", lng: 87.678, lat: 43.827, description: "城市近郊温泉与山林景区，休闲养生、徒步观光的城市后花园", recommend: 7 },
+{ name: "吐鲁番交河故城景区", type: "4A级景区", address: "新疆维吾尔自治区吐鲁番市高昌区", lng: 89.127, lat: 42.977, description: "世界上保存最完整的生土建筑城市，古丝绸之路重镇遗址，历史价值极高", recommend: 9 },
+{ name: "喀什泽普金湖杨景区", type: "4A级景区", address: "新疆维吾尔自治区喀什地区泽普县", lng: 77.227, lat: 38.227, description: "胡杨林与叶尔羌河交织，秋季胡杨金黄，是南疆最美胡杨林景区之一", recommend: 8 },
+{ name: "阿克苏库车王府景区", type: "4A级景区", address: "新疆维吾尔自治区阿克苏地区库车市", lng: 82.978, lat: 41.727, description: "清代库车回王府邸，展现库车回王历史与维吾尔族民俗文化", recommend: 7 },
+{ name: "巴音郭楞蒙古自治州天鹅河景区", type: "4A级景区", address: "新疆维吾尔自治区巴音郭楞蒙古自治州库尔勒市", lng: 86.178, lat: 41.777, description: "城市河流景区，天鹅栖息于此，是库尔勒城市生态名片", recommend: 7 },
+{ name: "克孜勒苏柯尔克孜自治州阿克陶县奥依塔克冰川公园", type: "4A级景区", address: "新疆维吾尔自治区克孜勒苏柯尔克孜自治州阿克陶县", lng: 75.278, lat: 38.927, description: "低海拔冰川公园，冰川与森林、草原交织，是冰川观光与探险胜地", recommend: 8 },
+{ name: "昌吉回族自治州杜氏旅游度假区", type: "4A级景区", address: "新疆维吾尔自治区昌吉回族自治州昌吉市", lng: 87.327, lat: 44.027, description: "乡村旅游度假区，集采摘、游乐、民俗体验于一体，适合家庭休闲", recommend: 7 },
+{ name: "哈密巴里坤坤湖景区", type: "4A级景区", address: "新疆维吾尔自治区哈密市巴里坤哈萨克自治县", lng: 93.027, lat: 43.627, description: "高原湖泊，草原与雪山环绕，是巴里坤草原核心景观", recommend: 8 },
+{ name: "和田和田玉文化旅游景区", type: "4A级景区", address: "新疆维吾尔自治区和田地区和田市", lng: 79.927, lat: 37.127, description: "和田玉文化核心区，展示和田玉开采、加工历史，体验玉石文化", recommend: 8 },
+{ name: "塔城额敏河景区", type: "4A级景区", address: "新疆维吾尔自治区塔城地区额敏县", lng: 83.627, lat: 46.527, description: "额敏河沿岸生态景区，湿地与草原交织，是观鸟、休闲的好去处", recommend: 7 },
+{ name: "乌鲁木齐南山风景区", type: "4A级景区", address: "新疆维吾尔自治区乌鲁木齐市乌鲁木齐县", lng: 87.327, lat: 43.527, description: "城市近郊山地景区，森林、草原、雪山交织，是乌鲁木齐市民避暑、徒步胜地", recommend: 8 },
+{ name: "伊犁赛里木湖景区", type: "4A级景区", address: "新疆维吾尔自治区伊犁哈萨克自治州博乐市", lng: 81.227, lat: 44.627, description: "“大西洋最后一滴眼泪”，湖水湛蓝，周边雪山、草原环绕，是新疆最美湖泊之一", recommend: 10 },
+
+// 宁夏回族自治区4A级景区数据模板
+
+{ name: "阅海湾旅游景区", type: "4A级景区", address: "宁夏回族自治区银川市金凤区", lng: 106.278, lat: 38.487, description: "银川城市滨水景区，湖光与城市建筑交融，休闲观光、亲子游玩佳选", recommend: 7 },
+{ name: "中粮长城天赋酒庄", type: "4A级景区", address: "宁夏回族自治区银川市西夏区", lng: 106.078, lat: 38.427, description: "贺兰山葡萄酒庄代表，集葡萄种植、酿造、品鉴于一体，体验葡萄酒文化", recommend: 8 },
+{ name: "沃福百瑞宁夏枸杞馆", type: "4A级景区", address: "宁夏回族自治区银川市西夏区", lng: 106.127, lat: 38.467, description: "枸杞文化主题馆，展示枸杞种植、加工历史，科普宁夏枸杞产业文化", recommend: 7 },
+{ name: "宁夏农旅产业园", type: "4A级景区", address: "宁夏回族自治区银川市贺兰县", lng: 106.327, lat: 38.577, description: "现代农业观光园区，集采摘、科普、休闲于一体，适合家庭亲子体验", recommend: 7 },
+{ name: "吴忠市董府景区", type: "4A级景区", address: "宁夏回族自治区吴忠市青铜峡市", lng: 105.978, lat: 37.877, description: "清代将领董福祥府邸，清末建筑典范，历史文化底蕴深厚", recommend: 8 },
+{ name: "银川镇北堡西部影城", type: "4A级景区", address: "宁夏回族自治区银川市西夏区", lng: 106.178, lat: 38.407, description: "中国十大影视基地之一，《大话西游》等经典影片取景地，体验西北影视风情", recommend: 9 },
+{ name: "中卫沙坡头景区", type: "4A级景区", address: "宁夏回族自治区中卫市沙坡头区", lng: 105.027, lat: 37.477, description: "集大漠、黄河、高山、绿洲于一体，滑沙、羊皮筏子等体验丰富，西北风光代表", recommend: 10 },
+{ name: "吴忠黄河楼景区", type: "4A级景区", address: "宁夏回族自治区吴忠市青铜峡市", lng: 106.078, lat: 37.827, description: "黄河文化地标，登楼可俯瞰黄河风光，展现黄河文明与宁夏历史", recommend: 8 },
+{ name: "固原六盘山红军长征景区", type: "4A级景区", address: "宁夏回族自治区固原市隆德县", lng: 106.127, lat: 35.627, description: "红军长征翻越最后一座大山的纪念地，红色教育与生态观光结合", recommend: 9 },
+{ name: "石嘴山沙湖旅游景区", type: "4A级景区", address: "宁夏回族自治区石嘴山市平罗县", lng: 106.327, lat: 38.827, description: "沙水相依的独特景观，沙漠与湖泊并存，观鸟、水上娱乐项目丰富", recommend: 9 },
+{ name: "银川贺兰山岩画景区", type: "4A级景区", address: "宁夏回族自治区银川市西夏区", lng: 106.027, lat: 38.527, description: "古代游牧民族岩画宝库，展现远古人类生活与信仰，文化价值极高", recommend: 8 },
+{ name: "中卫腾格里沙漠湿地·金沙海旅游区", type: "4A级景区", address: "宁夏回族自治区中卫市沙坡头区", lng: 105.127, lat: 37.527, description: "腾格里沙漠边缘湿地，沙漠与绿洲交织，是沙漠观光与生态体验胜地", recommend: 8 },
+{ name: "吴忠青铜峡黄河大峡谷景区", type: "4A级景区", address: "宁夏回族自治区吴忠市青铜峡市", lng: 105.927, lat: 37.877, description: "黄河上游峡谷景观，108塔、水利枢纽等人文与自然交融，游船观光佳选", recommend: 8 },
+{ name: "固原须弥山石窟景区", type: "4A级景区", address: "宁夏回族自治区固原市原州区", lng: 105.927, lat: 36.027, description: "宁夏最早的石窟群，佛教造像精美，是丝绸之路上的佛教艺术瑰宝", recommend: 8 },
+{ name: "石嘴山星海湖景区", type: "4A级景区", address: "宁夏回族自治区石嘴山市大武口区", lng: 106.378, lat: 38.927, description: "城市湖泊湿地景区，湖光山色秀美，是市民休闲、观鸟的好去处", recommend: 7 },
+   
+//该部分代码为旅图Go2.0版本新增，包括了广东，广西，湖北，湖南四省4a景区
+// 广东省4A级景区完整数据模板 - 高德GCJ02坐标系 | 直接嵌入网站使用
+
+{ name: "广州塔景区", type: "4A级景区", address: "广东省广州市海珠区", lng: 113.324, lat: 23.116, description: "广州地标性建筑，集观光、游乐、餐饮于一体，可俯瞰珠江两岸城市风光，拥有摩天轮、极速云霄等特色项目", recommend: 10 },
+{ name: "中山纪念堂", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.269, lat: 23.135, description: "为纪念孙中山先生而建的历史建筑，融合中西建筑风格，是广州重要的文化和纪念地标", recommend: 9 },
+{ name: "莲花山旅游区", type: "4A级景区", address: "广东省广州市番禺区", lng: 113.442, lat: 22.967, description: "拥有古采石场遗址、莲花塔等景观，自然风光与人文古迹交融，是祈福、观光的休闲胜地", recommend: 8 },
+{ name: "越秀公园", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.261, lat: 23.138, description: "广州最大的综合性公园，五羊石像为城市象征，园内有越秀山、镇海楼等知名景点", recommend: 9 },
+{ name: "黄花岗公园", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.281, lat: 23.133, description: "辛亥革命七十二烈士墓园所在地，红色旅游经典景区，园内庄严肃穆，绿植葱郁", recommend: 8 },
+{ name: "南越王博物院（王墓展区）", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.257, lat: 23.137, description: "依托西汉南越王墓而建，馆藏大量珍贵文物，展现岭南地区古代历史文化风貌", recommend: 8 },
+{ name: "陈家祠旅游景区", type: "4A级景区", address: "广东省广州市荔湾区", lng: 113.247, lat: 23.122, description: "岭南建筑艺术的明珠，集木雕、砖雕、石雕等工艺于一体，现为广东民间工艺博物馆", recommend: 9 },
+{ name: "广州动物园", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.260, lat: 23.130, description: "城市中心综合性动物园，饲养多种珍稀野生动物，是亲子游玩、科普教育的好去处", recommend: 7 },
+{ name: "广东科学中心", type: "4A级景区", address: "广东省广州市番禺区", lng: 113.382, lat: 23.045, description: "国内大型科普教育基地，拥有多个主题展馆，以互动体验的方式普及科学知识", recommend: 8 },
+{ name: "九龙湖旅游度假区", type: "4A级景区", address: "广东省广州市花都区", lng: 113.228, lat: 23.410, description: "依托九龙湖打造的生态度假区，湖光山色秀美，配套休闲、住宿、游乐等设施", recommend: 7 },
+{ name: "广州起义烈士陵园", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.272, lat: 23.121, description: "纪念广州起义牺牲烈士的陵园，红色旅游景区，园内有烈士纪念碑、纪念馆等建筑", recommend: 8 },
+{ name: "南海神庙景区", type: "4A级景区", address: "广东省广州市黄埔区", lng: 113.445, lat: 23.118, description: "中国古代海上丝绸之路的重要遗迹，祭祀南海神的庙宇，历史悠久，文化底蕴深厚", recommend: 7 },
+{ name: "岭南印象园", type: "4A级景区", address: "广东省广州市番禺区", lng: 113.423, lat: 23.008, description: "展现岭南传统村落风貌的景区，融合岭南建筑、民俗、美食，沉浸式体验岭南文化", recommend: 8 },
+{ name: "南沙天后宫", type: "4A级景区", address: "广东省广州市南沙区", lng: 113.568, lat: 22.772, description: "东南亚最大的妈祖庙，依山面海而建，建筑气势恢宏，是祈福、观海的特色景区", recommend: 7 },
+{ name: "北京路文化旅游区", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.264, lat: 23.117, description: "广州历史最悠久的商业街，兼具文化与商业价值，有千年古道遗址、骑楼等景观", recommend: 10 },
+{ name: "沙湾古镇景区", type: "4A级景区", address: "广东省广州市番禺区", lng: 113.321, lat: 22.908, description: "岭南经典古镇，保留大量明清建筑，是广东音乐、沙湾飘色的发源地，民俗文化浓郁", recommend: 8 },
+{ name: "永庆坊旅游区", type: "4A级景区", address: "广东省广州市荔湾区", lng: 113.244, lat: 23.120, description: "依托西关老街改造的文旅街区，融合岭南西关风情与现代文创，网红打卡胜地", recommend: 9 },
+{ name: "石门国家森林公园", type: "4A级景区", address: "广东省广州市从化区", lng: 113.557, lat: 23.558, description: "国家级森林公园，森林覆盖率高，有红叶谷、石门天池等景观，四季风光各异", recommend: 7 },
+{ name: "广州起义纪念馆", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.263, lat: 23.122, description: "依托广州起义指挥部旧址而建，馆藏起义相关文物史料，是红色教育重要基地", recommend: 8 },
+{ name: "黄埔军校旧址纪念馆旅游区", type: "4A级景区", address: "广东省广州市黄埔区", lng: 113.407, lat: 23.098, description: "中国近代著名军事学校旧址，培养了大批爱国将领，是红色旅游和历史教育胜地", recommend: 9 },
+{ name: "石头记矿物园", type: "4A级景区", address: "广东省广州市花都区", lng: 113.215, lat: 23.427, description: "以矿物宝石为主题的景区，拥有大量矿物标本和奇石景观，兼具科普与观赏价值", recommend: 6 },
+{ name: "宝墨园 - 南粤苑景区", type: "4A级景区", address: "广东省广州市番禺区", lng: 113.302, lat: 22.917, description: "岭南古典园林代表，亭台楼阁、碧水荷风，融合岭南建筑与江南园林特色，馆藏丰富", recommend: 8 },
+{ name: "广州融创文旅城", type: "4A级景区", address: "广东省广州市花都区", lng: 113.208, lat: 23.436, description: "大型综合性文旅综合体，拥有融创乐园、水世界、雪世界等，适合家庭休闲游乐", recommend: 9 },
+{ name: "余荫山房", type: "4A级景区", address: "广东省广州市番禺区", lng: 113.365, lat: 22.938, description: "广东四大名园之一，岭南微型园林的典范，布局精巧，亭台楼阁错落有致", recommend: 8 },
+{ name: "白水寨旅游区", type: "4A级景区", address: "广东省广州市增城区", lng: 113.897, lat: 23.645, description: "以落差428.5米的白水仙瀑布为核心，山林叠翠，溪流潺潺，是徒步观光的胜地", recommend: 7 },
+{ name: "从化碧水湾温泉度假村", type: "4A级景区", address: "广东省广州市从化区", lng: 113.602, lat: 23.648, description: "知名温泉度假村，拥有多种特色温泉池，配套完善的住宿和休闲设施，养生度假佳选", recommend: 8 },
+{ name: "七彩澳游世界旅游区", type: "4A级景区", address: "广东省广州市增城区", lng: 113.815, lat: 23.297, description: "以澳洲风情为主题的文旅景区，有萌宠互动、花海观光、户外游乐等多种体验", recommend: 6 },
+{ name: "天人山水旅游区", type: "4A级景区", address: "广东省广州市从化区", lng: 113.726, lat: 23.605, description: "生态文旅度假区，融合自然山水与艺术景观，有花海、湖泊、网红打卡点等", recommend: 7 },
+{ name: "帽峰山森林公园景区", type: "4A级景区", address: "广东省广州市白云区", lng: 113.428, lat: 23.375, description: "广州近郊森林公园，主峰海拔534.9米，森林茂密，空气清新，适合徒步休闲", recommend: 6 },
+{ name: "华南国家植物园", type: "4A级景区", address: "广东省广州市天河区", lng: 113.345, lat: 23.158, description: "国家级植物园，收集大量热带亚热带植物，兼具科研、科普和观光价值，绿植繁茂", recommend: 8 },
+{ name: "海珠湿地公园景区", type: "4A级景区", address: "广东省广州市海珠区", lng: 113.342, lat: 23.097, description: "广州中心城区的生态绿核，湿地风光秀美，生物多样性丰富，是观鸟、休闲的好去处", recommend: 7 },
+{ name: "中国共产党第三次全国代表大会会址纪念馆旅游区", type: "4A级景区", address: "广东省广州市越秀区", lng: 113.258, lat: 23.125, description: "中共三大召开地旧址，红色旅游经典景区，馆藏大量史料，展现建党初期的革命历史", recommend: 9 },
+{ name: "广州市城市规划展览中心", type: "4A级景区", address: "广东省广州市白云区", lng: 113.267, lat: 23.178, description: "展示广州城市规划与发展的专业展馆，采用高科技手段，沉浸式了解广州城市变迁", recommend: 6 },
+{ name: "广州市文化馆（新馆）景区", type: "4A级景区", address: "广东省广州市海珠区", lng: 113.318, lat: 23.092, description: "广州文化新地标，融合岭南建筑风格，开展各类文化展览、非遗展示和文艺活动", recommend: 7 },
+{ name: "广州市流溪河国家森林公园", type: "4A级景区", address: "广东省广州市从化区", lng: 113.735, lat: 23.758, description: "国家级森林公园，依托流溪河水库而建，湖光山色，森林广袤，是生态观光胜地", recommend: 7 },
+{ name: "广州市白江湖森林公园", type: "4A级景区", address: "广东省广州市增城区", lng: 113.856, lat: 23.527, description: "近郊森林公园，有白江湖、瀑布群等自然景观，山林清幽，适合徒步和亲子游玩", recommend: 6 },
+{ name: "广州市增城何仙姑景区", type: "4A级景区", address: "广东省广州市增城区", lng: 113.867, lat: 23.218, description: "以何仙姑文化为主题的景区，有何仙姑家庙、仙藤、宝塔等景观，民俗文化浓郁", recommend: 6 },
+{ name: "仙湖植物园", type: "4A级景区", address: "广东省深圳市罗湖区", lng: 114.172, lat: 22.578, description: "深圳老牌植物园，融合植物观赏、宗教文化（弘法寺），依山面湖，风光秀美", recommend: 9 },
+{ name: "欢乐港湾旅游景区", type: "4A级景区", address: "广东省深圳市宝安区", lng: 113.898, lat: 22.547, description: "深圳前海网红地标，有“湾区之光”摩天轮、滨海演艺中心，集休闲、观光、娱乐于一体", recommend: 10 },
+{ name: "光明农场大观园景区", type: "4A级景区", address: "广东省深圳市光明区", lng: 113.927, lat: 22.786, description: "以农业观光和亲子体验为特色，可体验挤牛奶、摘水果，品尝光明乳鸽等特色美食", recommend: 7 },
+{ name: "野生动物园", type: "4A级景区", address: "广东省深圳市南山区", lng: 113.938, lat: 22.557, description: "国内首家放养式野生动物园，饲养多种珍稀动物，有动物表演、自驾投喂等体验", recommend: 9 },
+{ name: "青青世界旅游区", type: "4A级景区", address: "广东省深圳市南山区", lng: 113.917, lat: 22.486, description: "以生态休闲为特色的景区，有热带雨林、蝴蝶谷、农场体验，亲近自然的好去处", recommend: 7 },
+{ name: "西部海上田园旅游区", type: "4A级景区", address: "广东省深圳市宝安区", lng: 113.807, lat: 22.608, description: "依托珠江口湿地打造的生态景区，融合水乡风情、农业观光，有多种水上娱乐项目", recommend: 6 },
+{ name: "观澜湖休闲旅游区", type: "4A级景区", address: "广东省深圳市龙华区", lng: 114.018, lat: 22.675, description: "以高尔夫运动为核心的休闲度假区，配套温泉、酒店、购物，适合高端休闲度假", recommend: 8 },
+{ name: "大梅沙海滨公园", type: "4A级景区", address: "广东省深圳市盐田区", lng: 114.317, lat: 22.586, description: "深圳知名免费海滨公园，沙滩开阔，海水清澈，是滨海休闲、玩水消暑的胜地", recommend: 10 },
+{ name: "华侨城创意文化园", type: "4A级景区", address: "广东省深圳市南山区", lng: 113.928, lat: 22.546, description: "由旧厂房改造的文创园区，聚集大量创意工作室、展览和特色小店，文艺气息浓厚", recommend: 8 },
+{ name: "海上世界旅游区", type: "4A级景区", address: "广东省深圳市南山区", lng: 113.927, lat: 22.528, description: "以“明华轮”为核心的滨海文旅街区，集美食、购物、休闲、观光于一体，夜景绝美", recommend: 9 },
+{ name: "深圳欢乐谷", type: "4A级景区", address: "广东省深圳市南山区", lng: 113.918, lat: 22.547, description: "国内知名主题乐园，拥有多种惊险刺激的游乐设施和特色演艺，适合年轻群体游玩", recommend: 10 },
+{ name: "深圳世界之窗", type: "4A级景区", address: "广东省深圳市南山区", lng: 113.917, lat: 22.548, description: "以世界名胜微缩景观为特色的主题公园，融合观光、游乐、演艺，一日游遍世界", recommend: 10 },
+{ name: "锦绣中华・民俗村", type: "4A级景区", address: "广东省深圳市南山区", lng: 113.915, lat: 22.550, description: "融合中国名胜微缩景观和各民族民俗文化，沉浸式体验中国传统文化和民族风情", recommend: 9 },
+{ name: "深圳东部华侨城茶溪谷", type: "4A级景区", address: "广东省深圳市盐田区", lng: 114.327, lat: 22.598, description: "东部华侨城休闲板块，有茵特拉根小镇、茶翁古镇、花海，欧式风情与自然山水融合", recommend: 9 },
+{ name: "深圳东部华侨城大侠谷", type: "4A级景区", address: "广东省深圳市盐田区", lng: 114.318, lat: 22.607, description: "东部华侨城游乐板块，拥有多种惊险游乐设施，依托山海风光，兼具刺激与观光", recommend: 9 },
+{ name: "深圳大鹏所城文化旅游区", type: "4A级景区", address: "广东省深圳市大鹏新区", lng: 114.378, lat: 22.537, description: "明清海防古城，深圳历史文化之根，保留大量明清建筑，民俗文化和红色文化交融", recommend: 9 },
+{ name: "深圳杨梅坑 - 鹿嘴山庄旅游区", type: "4A级景区", address: "广东省深圳市大鹏新区", lng: 114.478, lat: 22.517, description: "深圳最美滨海徒步路线，依山面海，沙滩礁石错落，是《美人鱼》取景地，网红打卡点", recommend: 10 },
+{ name: "深圳甘坑客家小镇", type: "4A级景区", address: "广东省深圳市龙岗区", lng: 114.157, lat: 22.618, description: "以客家文化为主题的特色小镇，保留客家围屋，融合文创、民俗、美食，客家风情浓郁", recommend: 8 },
+{ name: "圆明新园", type: "4A级景区", address: "广东省珠海市香洲区", lng: 113.578, lat: 22.257, description: "以北京圆明园为蓝本的仿古园林，复刻多处经典景观，融合皇家园林与江南园林特色", recommend: 8 },
+{ name: "桂山岛风景区", type: "4A级景区", address: "广东省珠海市香洲区", lng: 113.727, lat: 22.078, description: "珠海知名海岛，拥有清新的滨海风光，可体验海岛徒步、海鲜美食、水上运动", recommend: 7 },
+{ name: "外伶仃岛旅游度假区", type: "4A级景区", address: "广东省珠海市香洲区", lng: 113.878, lat: 22.017, description: "珠海小众海岛，海水清澈见底，是潜水、海钓的胜地，可远眺香港长洲岛", recommend: 8 },
+{ name: "东澳岛旅游度假区", type: "4A级景区", address: "广东省珠海市香洲区", lng: 113.678, lat: 22.027, description: "珠海知名度假海岛，有南沙湾沙滩、钻石沙滩，配套高端酒店，滨海度假佳选", recommend: 9 },
+{ name: "珠海长隆海洋王国", type: "4A级景区", address: "广东省珠海市香洲区", lng: 113.587, lat: 22.138, description: "全球知名海洋主题乐园，拥有多种珍稀海洋生物，大型演艺和惊险游乐设施兼具", recommend: 10 },
+{ name: "珠海御温泉度假村", type: "4A级景区", address: "广东省珠海市斗门区", lng: 113.278, lat: 22.217, description: "日式风情温泉度假村，拥有多种特色温泉池，配套庙会小吃街，养生休闲佳选", recommend: 9 },
+{ name: "珠海海泉湾旅游度假区", type: "4A级景区", address: "广东省珠海市金湾区", lng: 113.127, lat: 21.987, description: "大型滨海温泉度假区，有海洋温泉、神秘岛乐园、剧场演艺，综合性休闲度假胜地", recommend: 8 },
+{ name: "珠海罗西尼工业旅游区", type: "4A级景区", address: "广东省珠海市香洲区", lng: 113.527, lat: 22.278, description: "以钟表文化为主题的工业旅游景区，可参观钟表生产流程，了解钟表文化和历史", recommend: 6 },
+{ name: "珠海汤臣倍健透明工厂景区", type: "4A级景区", address: "广东省珠海市金湾区", lng: 113.227, lat: 22.018, description: "营养保健品工业旅游景区，透明化展示生产流程，兼具科普教育和工业观光价值", recommend: 6 },
+{ name: "珠海横琴星乐度・露营小镇", type: "4A级景区", address: "广东省珠海市香洲区", lng: 113.598, lat: 22.127, description: "以露营为主题的文旅小镇，有多种特色露营房型和户外游乐设施，适合亲子休闲", recommend: 7 },
+{ name: "珠海斗门古街景区", type: "4A级景区", address: "广东省珠海市斗门区", lng: 113.218, lat: 22.267, description: "珠海百年骑楼老街，保留西洋风格骑楼建筑，集美食、购物、民俗于一体，市井气息浓", recommend: 7 },
+{ name: "珠海金台寺景区", type: "4A级景区", address: "广东省珠海市斗门区", lng: 113.178, lat: 22.178, description: "珠海知名佛教寺院，依山面湖而建，建筑气势恢宏，环境清幽，是祈福观光胜地", recommend: 7 },
+{ name: "南澳岛生态旅游区", type: "4A级景区", address: "广东省汕头市南澳县", lng: 117.078, lat: 23.427, description: "广东唯一海岛县，拥有绵长的海岸线、清新的滨海风光，山海相依，生态环境绝佳", recommend: 10 },
+{ name: "妈屿岛旅游区", type: "4A级景区", address: "广东省汕头市龙湖区", lng: 116.758, lat: 23.378, description: "汕头近郊小众海岛，有妈祖庙、海滨沙滩，融合海洋文化和民俗文化，休闲观光佳选", recommend: 7 },
+{ name: "潮阳莲花峰风景区", type: "4A级景区", address: "广东省汕头市潮阳区", lng: 116.578, lat: 23.178, description: "因山峰形似莲花而得名，濒临南海，有海滨风光、历史碑刻，是观海怀古胜地", recommend: 7 },
+{ name: "澄海前美古村（含陈慈黉故居）", type: "4A级景区", address: "广东省汕头市澄海区", lng: 116.727, lat: 23.478, description: "岭南知名古村，陈慈黉故居为岭南侨宅典范，建筑融合中西风格，雕梁画栋，气势恢宏", recommend: 8 },
+{ name: "汕头小公园开埠区", type: "4A级景区", address: "广东省汕头市金平区", lng: 116.648, lat: 23.367, description: "汕头开埠文化发源地，保留大量骑楼建筑，以中山纪念亭为核心，市井文化和侨乡文化浓郁", recommend: 9 },
+{ name: "汕头方特欢乐世界・蓝水星", type: "4A级景区", address: "广东省汕头市龙湖区", lng: 116.778, lat: 23.398, description: "粤东知名主题乐园，以科幻为特色，拥有多种高科技游乐设施，适合年轻群体和亲子", recommend: 8 },
+{ name: "汕头礐石风景名胜区", type: "4A级景区", address: "广东省汕头市濠江区", lng: 116.618, lat: 23.347, description: "汕头老牌景区，依山面海，有奇峰怪石、寺庙亭台，是登高观海、休闲祈福的胜地", recommend: 7 },
+{ name: "汕头中山公园", type: "4A级景区", address: "广东省汕头市金平区", lng: 116.638, lat: 23.378, description: "粤东知名老牌公园，中式园林风格，有九曲桥、假山、亭台，是市民休闲的好去处", recommend: 6 },
+{ name: "汕头开埠文化陈列馆", type: "4A级景区", address: "广东省汕头市金平区", lng: 116.647, lat: 23.368, description: "展示汕头开埠历史的展馆，馆藏大量开埠相关文物史料，展现汕头侨乡文化和近代历史", recommend: 7 },
+{ name: "汕头侨批文物馆", type: "4A级景区", address: "广东省汕头市金平区", lng: 116.648, lat: 23.367, description: "以侨批文化为主题的展馆，馆藏大量侨批文物，展现潮汕华侨的海外奋斗史和家国情怀", recommend: 7 },
+{ name: "南风古灶旅游区", type: "4A级景区", address: "广东省佛山市禅城区", lng: 113.058, lat: 23.017, description: "拥有500多年历史的龙窑，是陶瓷活化石，可体验制陶，感受石湾陶瓷文化的魅力", recommend: 9 },
+{ name: "盈香生态园", type: "4A级景区", address: "广东省佛山市高明区", lng: 112.827, lat: 22.878, description: "大型农业生态园，有花海观光、亲子游乐、户外拓展，配套特色美食，适合家庭游玩", recommend: 8 },
+{ name: "祖庙博物馆", type: "4A级景区", address: "广东省佛山市禅城区", lng: 113.068, lat: 23.057, description: "佛山文化地标，供奉北帝，融合木雕、砖雕、陶塑等工艺，是岭南民俗文化的核心", recommend: 10 },
+{ name: "皂幕山旅游风景区", type: "4A级景区", address: "广东省佛山市高明区", lng: 112.927, lat: 22.827, description: "佛山第一高峰，山林叠翠，溪流潺潺，登顶可俯瞰珠三角风光，徒步观光佳选", recommend: 7 },
+{ name: "平洲玉器街景区", type: "4A级景区", address: "广东省佛山市南海区", lng: 113.178, lat: 23.018, description: "中国知名玉器集散地，集玉器加工、销售、鉴赏于一体，玉器文化浓郁，可淘玉赏玉", recommend: 7 },
+{ name: "陈村花卉世界", type: "4A级景区", address: "广东省佛山市顺德区", lng: 113.127, lat: 22.987, description: "中国知名花卉交易中心，花海连绵，品种繁多，兼具花卉观光和交易功能", recommend: 7 },
+{ name: "顺德罗浮宫国际家具艺术博览中心", type: "4A级景区", address: "广东省佛山市顺德区", lng: 113.187, lat: 22.898, description: "全球知名家具博览中心，集家具展示、销售、艺术鉴赏于一体，建筑气势恢宏", recommend: 6 },
+{ name: "乐从国际家居汇展中心", type: "4A级景区", address: "广东省佛山市顺德区", lng: 113.198, lat: 22.887, description: "中国知名家居集散地，汇聚大量家居品牌，集展示、销售、体验于一体", recommend: 6 },
+{ name: "史努比缤纷世界景区", type: "4A级景区", address: "广东省佛山市顺德区", lng: 113.227, lat: 22.898, description: "以史努比为主题的亲子乐园，有多种卡通游乐设施和表演，适合低龄儿童游玩", recommend: 7 },
+{ name: "紫南村文化旅游区", type: "4A级景区", address: "广东省佛山市禅城区", lng: 112.978, lat: 22.987, description: "岭南美丽乡村典范，村容整洁，融合民俗文化、乡村旅游，是乡村振兴示范基地", recommend: 7 },
+{ name: "三水荷花世界", type: "4A级景区", address: "广东省佛山市三水区", lng: 112.987, lat: 23.127, description: "世界知名荷花主题景区，荷花品种繁多，夏季荷花盛开，景色绝美，配套水上游乐", recommend: 7 },
+{ name: "佛山创意产业园", type: "4A级景区", address: "广东省佛山市禅城区", lng: 113.078, lat: 23.047, description: "旧厂房改造的文创园区，聚集大量特色餐饮、文创小店、休闲娱乐，夜经济氛围浓厚", recommend: 8 },
+{ name: "佛山岭南天地", type: "4A级景区", address: "广东省佛山市禅城区", lng: 113.068, lat: 23.058, description: "依托岭南古民居改造的文旅街区，保留镬耳屋等岭南建筑，融合文创、美食、购物", recommend: 9 },
+{ name: "佛山梁园", type: "4A级景区", address: "广东省佛山市禅城区", lng: 113.088, lat: 23.067, description: "广东四大名园之一，岭南古典园林典范，布局精巧，碧水萦回，亭台楼阁错落", recommend: 8 },
+{ name: "佛山清晖园", type: "4A级景区", address: "广东省佛山市顺德区", lng: 113.268, lat: 22.807, description: "广东四大名园之一，岭南园林精品，布局紧凑，兼具江南园林韵味，馆藏丰富", recommend: 9 },
+{ name: "佛山南海湾森林生态园", type: "4A级景区", address: "广东省佛山市南海区", lng: 112.927, lat: 22.807, description: "近郊森林生态园，山林叠翠，溪流瀑布成群，空气清新，是徒步溯溪的胜地", recommend: 7 },
+{ name: "佛山梦里水乡景区", type: "4A级景区", address: "广东省佛山市南海区", lng: 113.198, lat: 23.127, description: "以水乡风情为特色的景区，河网密布，古桥错落，夜景绝美，融合民俗与休闲", recommend: 7 },
+{ name: "佛山西樵山国艺影视城", type: "4A级景区", address: "广东省佛山市南海区", lng: 112.907, lat: 22.828, description: "以影视拍摄为核心的景区，复刻多个时代的建筑风貌，可体验影视拍摄，打卡网红景点", recommend: 8 },
+{ name: "佛山高明盈香生态园", type: "4A级景区", address: "广东省佛山市高明区", lng: 112.828, lat: 22.877, description: "盈香生态园姊妹园区，同样以农业观光、亲子游乐为特色，配套更多户外拓展项目", recommend: 7 },
+{ name: "佛山顺德容桂渔人码头", type: "4A级景区", address: "广东省佛山市顺德区", lng: 113.298, lat: 22.787, description: "由旧码头改造的文旅街区，江景秀美，集特色餐饮、文创小店、休闲打卡于一体", recommend: 8 },
+{ name: "佛山顺德欢乐海岸 PLUS", type: "4A级景区", address: "广东省佛山市顺德区", lng: 113.248, lat: 22.817, description: "顺德网红文旅综合体，有“顺德眼”摩天轮、大型游乐设施，融合美食、游乐、休闲", recommend: 10 },
+{ name: "佛山南海千灯湖公园", type: "4A级景区", address: "广东省佛山市南海区", lng: 113.138, lat: 23.087, description: "佛山城市地标，湖光山色秀美，灯光夜景一绝，是市民休闲、打卡的好去处", recommend: 9 },
+{ name: "古佛洞天景区", type: "4A级景区", address: "广东省韶关市乐昌市", lng: 113.327, lat: 25.018, description: "岭南知名喀斯特溶洞，洞内钟乳石千姿百态，有古佛造像，融自然与人文景观于一体", recommend: 7 },
+{ name: "帽子峰旅游景区", type: "4A级景区", address: "广东省韶关市南雄市", lng: 114.378, lat: 25.278, description: "以红叶观光为特色的景区，秋季红叶漫山，层林尽染，有“粤北小九寨”之称", recommend: 8 },
+{ name: "珠玑古巷・梅关古道景区", type: "4A级景区", address: "广东省韶关市南雄市", lng: 114.327, lat: 25.078, description: "客家先民南迁的重要驿站，梅关古道是古代南北交通要道，冬季梅花盛开，景色绝美", recommend: 9 },
+{ name: "曹溪温泉假日度假村", type: "4A级景区", address: "广东省韶关市曲江区", lng: 113.678, lat: 24.827, description: "依托温泉资源打造的度假村，毗邻南华寺，温泉养生与佛教文化交融，休闲祈福佳选", recommend: 7 },
+{ name: "经律论文化旅游小镇景区", type: "4A级景区", address: "广东省韶关市曲江区", lng: 113.727, lat: 24.878, description: "以佛教文化为主题的文旅小镇，毗邻南华寺，有温泉、禅修、观光等多种体验", recommend: 7 },
+{ name: "丽宫旅游区", type: "4A级景区", address: "广东省韶关市乳源瑶族自治县", lng: 113.278, lat: 24.727, description: "大型综合性旅游区，有温泉、滑雪、游乐等设施，融合自然山水与休闲娱乐", recommend: 7 },
+{ name: "南岭国家森林公园", type: "4A级景区", address: "广东省韶关市乳源瑶族自治县", lng: 113.178, lat: 24.878, description: "国家级森林公园，广东海拔最高的森林公园，山林广袤，生物多样性丰富，生态绝佳", recommend: 8 },
+{ name: "广东大峡谷景区", type: "4A级景区", address: "广东省韶关市乳源瑶族自治县", lng: 113.078, lat: 24.778, description: "广东知名大峡谷，落差300多米，峡谷幽深，瀑布成群，徒步观光的绝佳胜地", recommend: 9 },
+{ name: "云门山生态文化旅游区", type: "4A级景区", address: "广东省韶关市乳源瑶族自治县", lng: 113.327, lat: 24.828, description: "依托云门山打造的文旅区，有玻璃桥、漂流、花海，融合自然山水与惊险游乐", recommend: 8 },
+{ name: "满堂客家大围景区", type: "4A级景区", address: "广东省韶关市始兴县", lng: 114.078, lat: 24.927, description: "岭南最大的客家围屋，建筑气势恢宏，保留完整的客家民居格局，客家文化浓郁", recommend: 8 },
+{ name: "东华山风景区", type: "4A级景区", address: "广东省韶关市翁源县", lng: 114.178, lat: 24.378, description: "以山水风光和佛教文化为特色，有东华寺、奇峰怪石，环境清幽，祈福观光佳选", recommend: 7 },
+{ name: "云天海原始森林度假村景区", type: "4A级景区", address: "广东省韶关市新丰县", lng: 114.027, lat: 24.078, description: "依托原始森林打造的度假村，森林覆盖率高，空气清新，是养生休闲、避暑的胜地", recommend: 7 },
+{ name: "万绿湖风景区", type: "4A级景区", address: "广东省河源市东源县", lng: 114.578, lat: 23.727, description: "华南最大的人工湖，湖水碧绿，岛屿星罗棋布，生态环境绝佳，游船观光的胜地", recommend: 9 },
+{ name: "巴伐利亚庄园", type: "4A级景区", address: "广东省河源市源城区", lng: 114.627, lat: 23.778, description: "以巴伐利亚风情为主题的文旅小镇，融合温泉、滑雪、宗教文化，异国风情浓郁", recommend: 8 },
+{ name: "客天下水晶温泉国际旅游度假区", type: "4A级景区", address: "广东省河源市源城区", lng: 114.678, lat: 23.728, description: "以客家文化为主题的温泉度假区，拥有多种特色温泉池，融合客家民俗与温泉养生", recommend: 7 },
+{ name: "霍山旅游风景区", type: "4A级景区", address: "广东省河源市龙川县", lng: 115.178, lat: 24.078, description: "岭南丹霞地貌名山，奇峰怪石千姿百态，有“丹霞第二”之称，登高观光佳选", recommend: 8 },
+{ name: "黄龙岩畲族风情旅游区", type: "4A级景区", address: "广东省河源市东源县", lng: 114.827, lat: 23.927, description: "以畲族文化和喀斯特溶洞为特色，洞内钟乳石奇特，可体验畲族民俗和歌舞", recommend: 7 },
+{ name: "佗城景区", type: "4A级景区", address: "广东省河源市龙川县", lng: 115.078, lat: 24.027, description: "岭南千年古县，南越王赵佗兴王之地，保留大量历史建筑，客家文化和历史文化交融", recommend: 8 },
+{ name: "河源恐龙文博园", type: "4A级景区", address: "广东省河源市源城区", lng: 114.688, lat: 23.757, description: "以恐龙文化为主题的文博园区，馆藏大量恐龙蛋化石，是恐龙科普教育的重要基地", recommend: 7 },
+{ name: "河源太平古街景区", type: "4A级景区", address: "广东省河源市源城区", lng: 114.678, lat: 23.748, description: "河源老牌商业街，保留骑楼建筑，集客家美食、购物、民俗于一体，市井气息浓郁", recommend: 6 },
+{ name: "客天下景区", type: "4A级景区", address: "广东省梅州市梅江区", lng: 116.178, lat: 24.278, description: "以客家文化为主题的大型文旅综合体，融合客家民俗、温泉、游乐、住宿，客家风情浓郁", recommend: 8 },
+{ name: "雁山湖国际花园度假村", type: "4A级景区", address: "广东省梅州市梅县区", lng: 116.427, lat: 24.427, description: "以花海和湖光山色为特色的度假村，花海连绵，湖水清澈，休闲度假佳选", recommend: 7 },
+{ name: "南寿峰旅游景区", type: "4A级景区", address: "广东省梅州市梅县区", lng: 116.278, lat: 24.327, description: "以养生文化为主题的景区，山林叠翠，配套养生温泉、药膳，是养生休闲的胜地", recommend: 7 },
+{ name: "五指石风景名胜区", type: "4A级景区", address: "广东省梅州市平远县", lng: 116.078, lat: 24.578, description: "岭南丹霞地貌名山，五座山峰形似五指，奇峰怪石，栈道悬空，景色绝美", recommend: 9 },
+{ name: "韩山历史文化旅游区", type: "4A级景区", address: "广东省梅州市丰顺县", lng: 116.127, lat: 24.178, description: "以韩文公文化为主题的景区，山林叠翠，有茶园、花海，融合文化观光与生态休闲", recommend: 7 },
+{ name: "三河坝战役纪念园景区", type: "4A级景区", address: "广东省梅州市大埔县", lng: 116.478, lat: 24.328, description: "纪念三河坝战役的红色旅游景区，有烈士纪念碑、纪念馆，展现革命先烈的英雄事迹", recommend: 9 },
+{ name: "球王故里文化旅游区", type: "4A级景区", address: "广东省梅州市五华县", lng: 115.778, lat: 23.927, description: "以球王李惠堂为主题的景区，展现足球文化和客家民俗，是足球文化爱好者的胜地", recommend: 7 },
+{ name: "叶剑英纪念园", type: "4A级景区", address: "广东省梅州市梅县区", lng: 116.227, lat: 24.378, description: "纪念叶剑英元帅的景区，有故居、纪念馆，馆藏大量史料，展现元帅的生平事迹", recommend: 9 },
+{ name: "雁南飞茶田景区", type: "4A级景区", address: "广东省梅州市梅县区", lng: 116.478, lat: 24.478, description: "以茶文化为主题的景区，万亩茶园连绵，融合客家文化和茶文化，品茶观光佳选", recommend: 9 },
+{ name: "灵光寺旅游区", type: "4A级景区", address: "广东省梅州市梅县区", lng: 116.488, lat: 24.487, description: "广东四大名寺之一，佛教文化圣地，寺内古木参天，建筑气势恢宏，祈福观光佳选", recommend: 8 },
+{ name: "长潭旅游区", type: "4A级景区", address: "广东省梅州市蕉岭县", lng: 116.178, lat: 24.627, description: "以长潭湖为核心的景区，湖光山色秀美，有客家围屋、寺庙，融合自然与人文景观", recommend: 7 },
+{ name: "百侯名镇旅游区", type: "4A级景区", address: "广东省梅州市大埔县", lng: 116.427, lat: 24.527, description: "岭南客家名镇，保留大量明清客家建筑，民俗文化浓郁，是客家文化体验的胜地", recommend: 8 },
+{ name: "坪山梯田旅游区", type: "4A级景区", address: "广东省梅州市大埔县", lng: 116.578, lat: 24.578, description: "岭南知名梯田景区，梯田层叠，四季风光各异，春季灌水、秋季稻黄，景色绝美", recommend: 8 },
+{ name: "富大陶瓷工业旅游区", type: "4A级景区", address: "广东省梅州市大埔县", lng: 116.478, lat: 24.427, description: "以陶瓷文化为主题的工业旅游景区，可参观陶瓷生产流程，体验制陶，感受客家陶瓷文化", recommend: 6 },
+{ name: "张弼士故居旅游区", type: "4A级景区", address: "广东省梅州市大埔县", lng: 116.627, lat: 24.528, description: "纪念张裕葡萄酒创始人张弼士的景区，故居为客家围屋，融合客家文化和侨乡文化", recommend: 7 },
+{ name: "龙门铁泉旅游度假区", type: "4A级景区", address: "广东省惠州市龙门县", lng: 114.178, lat: 23.727, description: "惠州知名温泉度假区，拥有多种特色温泉池，配套完善的住宿和休闲设施，养生度假佳选", recommend: 8 },
+{ name: "五矿・哈施塔特旅游小镇", type: "4A级景区", address: "广东省惠州市博罗县", lng: 114.427, lat: 23.178, description: "以奥地利哈施塔特小镇为蓝本的文旅小镇，欧式风情浓郁，网红打卡胜地", recommend: 9 },
+{ name: "巽寮国际滨海旅游度假区", type: "4A级景区", address: "广东省惠州市惠东县", lng: 114.878, lat: 22.827, description: "惠州知名滨海度假区，沙滩绵延，海水清澈，配套大量酒店和游乐设施，滨海度假佳选", recommend: 10 },
+{ name: "罗浮山风景名胜区", type: "4A级景区", address: "广东省惠州市博罗县", lng: 114.078, lat: 23.278, description: "岭南四大名山之一，道教第七洞天，山林叠翠，道观林立，祈福观光、养生休闲佳选", recommend: 10 },
+{ name: "南昆山生态旅游区", type: "4A级景区", address: "广东省惠州市龙门县", lng: 114.327, lat: 23.627, description: "岭南知名生态旅游区，森林覆盖率高，空气清新，是避暑、养生、徒步的胜地", recommend: 9 },
+{ name: "惠州西湖风景名胜区", type: "4A级景区", address: "广东省惠州市惠城区", lng: 114.428, lat: 23.078, description: "惠州城市名片，“苎萝西子”，湖光山色秀美，亭台楼阁错落，与杭州西湖齐名", recommend: 10 },
+{ name: "惠州海滨温泉旅游度假区", type: "4A级景区", address: "广东省惠州市惠东县", lng: 114.927, lat: 22.878, description: "滨海温泉度假区，融合温泉养生和滨海风光，拥有多种特色温泉池，休闲度假佳选", recommend: 7 },
+{ name: "惠州尚天然花海温泉小镇", type: "4A级景区", address: "广东省惠州市龙门县", lng: 114.227, lat: 23.778, description: "以花海和温泉为特色的小镇，花海连绵，温泉养生，配套客家围屋，融合自然与民俗", recommend: 7 },
+{ name: "惠州永记生态园", type: "4A级景区", address: "广东省惠州市惠东县", lng: 114.727, lat: 22.927, description: "大型农业生态园，有花海观光、亲子游乐、科普教育，适合家庭游玩和农业体验", recommend: 6 },
+{ name: "惠州大亚湾黄金海岸", type: "4A级景区", address: "广东省惠州市惠阳区", lng: 114.578, lat: 22.678, description: "大亚湾知名海滨沙滩，沙滩开阔，海水清澈，是滨海休闲、玩水消暑的好去处", recommend: 8 },
+{ name: "惠州双月湾旅游区", type: "4A级景区", address: "广东省惠州市惠东县", lng: 114.978, lat: 22.727, description: "因形状似两轮弯月而得名，左右两个海湾风光各异，沙滩绵延，是滨海观光的胜地", recommend: 10 },
+{ name: "惠州红花湖景区", type: "4A级景区", address: "广东省惠州市惠城区", lng: 114.378, lat: 23.027, description: "惠州城市绿核，环湖18公里绿道，湖光山色秀美，是骑行、徒步、休闲的好去处", recommend: 9 },
+{ name: "惠州叶挺将军纪念园", type: "4A级景区", address: "广东省惠州市惠阳区", lng: 114.478, lat: 22.827, description: "纪念叶挺将军的红色旅游景区，有故居、纪念馆，展现将军的革命生平与英雄事迹", recommend: 9 },
+{ name: "惠州秋长谷里旅游区", type: "4A级景区", address: "广东省惠州市惠阳区", lng: 114.427, lat: 22.878, description: "依托客家古村改造的文旅区，保留客家围屋，融合乡村旅游、文创、民宿，客家风情浓郁", recommend: 7 },
+{ name: "凤山祖庙旅游区", type: "4A级景区", address: "广东省汕尾市城区", lng: 115.378, lat: 22.727, description: "汕尾知名妈祖庙，依山面海而建，建筑气势恢宏，是潮汕地区重要的祈福圣地", recommend: 8 },
+{ name: "海丰水底山旅游度假区", type: "4A级景区", address: "广东省汕尾市海丰县", lng: 115.078, lat: 22.878, description: "大型山地旅游度假区，有温泉、瀑布、花海，融合自然山水与休闲养生，度假佳选", recommend: 7 },
+{ name: "陆丰玄武山旅游区", type: "4A级景区", address: "广东省汕尾市陆丰市", lng: 115.878, lat: 22.927, description: "粤东知名佛教圣地，元山寺为核心，建筑气势恢宏，民俗文化浓郁，祈福观光佳选", recommend: 9 },
+{ name: "海丰莲花山度假村", type: "4A级景区", address: "广东省汕尾市海丰县", lng: 115.227, lat: 22.978, description: "依托莲花山打造的度假村，山林叠翠，温泉养生，配套完善，休闲度假佳选", recommend: 7 },
+{ name: "海丰新山红色旅游区", type: "4A级景区", address: "广东省汕尾市海丰县", lng: 115.178, lat: 22.928, description: "红色旅游经典景区，是彭湃烈士开展革命活动的重要地点，红色文化底蕴深厚", recommend: 8 },
+{ name: "汕尾红海湾旅游区", type: "4A级景区", address: "广东省汕尾市城区", lng: 115.527, lat: 22.627, description: "汕尾知名滨海旅游区，沙滩礁石错落，海浪汹涌，是冲浪、观海的胜地，网红打卡点", recommend: 10 },
+{name: "汕尾金町湾旅游区", type: "4A 级景区", address: "广东省汕尾市城区", lng: 115.327, lat: 22.778, description: "汕尾新晋滨海网红打卡点，沙滩开阔平缓，海水清澈，配套网红民宿、滨海步道，是休闲度假、观海打卡的佳选", recommend: 9},
+{ name: "广东观音山国家森林公园", type: "4A 级景区", address: "广东省东莞市樟木头镇", lng: 114.178, lat: 22.927, description: "东莞知名森林公园，以观音文化为核心，山林叠翠，有观音圣像、寺庙，是祈福、徒步的胜地", recommend: 8 },
+{ name: "龙凤山庄影视旅游区", type: "4A 级景区", address: "广东省东莞市凤岗镇", lng: 114.127, lat: 22.778, description: "以影视拍摄和婚庆为特色的景区，欧式建筑林立，花海连绵，是网红打卡、婚纱拍摄的佳选", recommend: 8 },
+{ name: "香市动物园", type: "4A 级景区", address: "广东省东莞市寮步镇", lng: 113.878, lat: 22.927, description: "东莞综合性动物园，饲养多种珍稀野生动物，有动物表演、亲子互动项目，适合家庭游玩", recommend: 7 },
+{ name: "香市文化旅游区", type: "4A 级景区", address: "广东省东莞市寮步镇", lng: 113.888, lat: 22.937, description: "以莞香文化为核心的景区，展现莞香种植、制作工艺，融合民俗文化、观光体验", recommend: 7 },
+{ name: "隐贤山庄", type: "4A 级景区", address: "广东省东莞市常平镇", lng: 114.178, lat: 22.978, description: "东莞综合性文旅景区，有游乐设施、动物园、寺庙，融合休闲游乐、祈福观光，适合家庭游玩", recommend: 8 },
+{ name: "松山湖生态景区", type: "4A 级景区", address: "广东省东莞市松山湖管委会", lng: 113.827, lat: 22.827, description: "东莞城市生态绿核，湖光山色秀美，环湖绿道绵长，是骑行、徒步、休闲观光的好去处", recommend: 9 },
+{ name: "鸦片战争博物馆景区", type: "4A 级景区", address: "广东省东莞市虎门镇", lng: 113.678, lat: 22.727, description: "纪念鸦片战争的红色旅游景区，有虎门销烟池、纪念馆，馆藏大量史料，是历史教育重要基地", recommend: 9 },
+{ name: "广东东江纵队旧址景区", type: "4A 级景区", address: "广东省东莞市大岭山镇", lng: 113.878, lat: 22.878, description: "东江纵队革命活动旧址，红色旅游经典景区，展现华南抗日游击战争的历史，红色教育基地", recommend: 8 },
+{ name: "可园博物馆景区", type: "4A 级景区", address: "广东省东莞市莞城区", lng: 113.758, lat: 22.937, description: "广东四大名园之一，岭南古典园林典范，布局精巧，亭台楼阁错落，馆藏岭南书画珍品", recommend: 8 },
+{ name: "华阳湖湿地公园景区", type: "4A 级景区", address: "广东省东莞市麻涌镇", lng: 113.578, lat: 22.827, description: "东莞知名湿地公园，水乡风光秀美，河网密布，古桥错落，可游船观光、体验水乡民俗", recommend: 8 },
+{ name: "东莞科学馆", type: "4A 级景区", address: "广东省东莞市莞城区", lng: 113.748, lat: 22.938, description: "东莞科普教育重要基地，拥有多个科普展厅和互动体验项目，适合青少年科普学习", recommend: 7 },
+{ name: "东莞展览馆", type: "4A 级景区", address: "广东省东莞市南城街道", lng: 113.778, lat: 22.917, description: "展示东莞城市发展和历史文化的展馆，馆藏大量文物和史料，沉浸式了解东莞的变迁与发展", recommend: 7 },
+{ name: "东莞袁崇焕纪念园", type: "4A 级景区", address: "广东省东莞市石碣镇", lng: 113.827, lat: 23.027, description: "纪念明末名将袁崇焕的景区，有故居、纪念馆、衣冠冢，展现袁崇焕的生平与英雄事迹", recommend: 8 },
+{ name: "东莞南社明清古村落", type: "4A 级景区", address: "广东省东莞市茶山镇", lng: 113.927, lat: 22.978, description: "保留完整的明清客家古村落，镬耳屋林立，民俗文化浓郁，是岭南古村观光的佳选", recommend: 8 },
+{ name: "东莞塘尾古村落", type: "4A 级景区", address: "广东省东莞市石排镇", lng: 113.978, lat: 23.027, description: "岭南明清古村落典范，保留大量古民居、祠堂，建筑风格独特，民俗文化底蕴深厚", recommend: 7 },
+{ name: "詹园景区", type: "4A 级景区", address: "广东省中山市南区街道", lng: 113.478, lat: 22.578, description: "岭南最大的私家古典园林，融合江南园林与岭南建筑特色，亭台楼阁、碧水荷风，景色秀美", recommend: 8 },
+{ name: "中国（大涌）红木文化博览城景区", type: "4A 级景区", address: "广东省中山市大涌镇", lng: 113.427, lat: 22.527, description: "以红木文化为核心的景区，集红木雕刻、展示、销售于一体，展现岭南红木工艺的魅力", recommend: 7 },
+{ name: "华艺广场景区", type: "4A 级景区", address: "广东省中山市古镇镇", lng: 113.278, lat: 22.578, description: "以灯饰文化为核心的工业旅游景区，集灯饰展示、设计、销售于一体，是古镇灯饰文化的代表", recommend: 7 },
+{ name: "圭峰山风景区", type: "4A 级景区", address: "广东省江门市新会区", lng: 113.078, lat: 22.527, description: "江门知名名山，山林叠翠，有玉台寺、圭峰湖等景观，是登高、祈福、休闲观光的胜地", recommend: 9 },
+{ name: "华侨城古劳水乡景区", type: "4A 级景区", address: "广东省江门市鹤山市", lng: 113.027, lat: 22.727, description: "岭南知名水乡，河网密布，桑基鱼塘错落，融合水乡观光、民俗体验、游乐休闲", recommend: 9 },
+{ name: "开平碉楼文化旅游区", type: "4A 级景区", address: "广东省江门市开平市", lng: 112.678, lat: 22.278, description: "岭南碉楼建筑代表，集防卫、居住于一体，建筑风格融合中西，是世界文化遗产组成部分", recommend: 10 },
+{ name: "台山上下川岛旅游区", type: "4A 级景区", address: "广东省江门市台山市", lng: 112.727, lat: 21.727, description: "江门知名海岛旅游区，上下川岛各具特色，沙滩绵长，海水清澈，滨海度假、海钓的佳选", recommend: 9 },
+{ name: "恩平金山温泉度假村", type: "4A 级景区", address: "广东省江门市恩平市", lng: 112.278, lat: 22.078, description: "江门知名温泉度假村，温泉水质优良，拥有多种特色温泉池，配套完善，养生度假佳选", recommend: 8 },
+{ name: "恩平帝都温泉旅游区", type: "4A 级景区", address: "广东省江门市恩平市", lng: 112.327, lat: 22.127, description: "以温泉养生为特色的景区，温泉池依山水而建，融合自然风光与温泉体验，休闲养生佳选", recommend: 8 },
+{ name: "恩平锦江温泉旅游度假区", type: "4A 级景区", address: "广东省江门市恩平市", lng: 112.227, lat: 22.027, description: "江门老牌温泉度假区，拥有动感温泉、养生温泉等多种池型，配套游乐设施，适合家庭游玩", recommend: 8 },
+{ name: "新会古兜温泉旅游度假区", type: "4A 级景区", address: "广东省江门市新会区", lng: 113.027, lat: 22.178, description: "集山海泉于一体的温泉度假区，有海洋温泉、淡水温泉，配套登山、观海，休闲度假佳选", recommend: 9 },
+{ name: "新会梁启超故居纪念馆", type: "4A 级景区", address: "广东省江门市新会区", lng: 113.078, lat: 22.578, description: "纪念梁启超先生的景区，有故居、纪念馆，馆藏大量史料，展现梁启超的生平与思想成就", recommend: 8 },
+{ name: "台山康桥温泉旅游度假区", type: "4A 级景区", address: "广东省江门市台山市", lng: 112.478, lat: 22.027, description: "台山知名温泉度假区，温泉池种类繁多，配套水上乐园、住宿，适合家庭休闲、温泉养生", recommend: 8 },
+{ name: "江门长廊生态园", type: "4A 级景区", address: "广东省江门市江海区", lng: 113.178, lat: 22.527, description: "江门综合性生态园，有花海观光、亲子游乐、萌宠互动，配套特色餐饮，适合家庭游玩", recommend: 7 },
+{ name: "大澳渔村旅游景区", type: "4A 级景区", address: "广东省阳江市阳东区", lng: 112.378, lat: 21.778, description: "岭南古渔村典范，保留完整的渔家风貌，可体验渔家民俗、品尝海鲜，感受滨海渔村文化", recommend: 8 },
+{ name: "凌霄岩风景区", type: "4A 级景区", address: "广东省阳江市阳春市", lng: 111.727, lat: 22.027, description: "岭南知名喀斯特溶洞，洞内钟乳石千姿百态，气势恢宏，有 “南国第一洞府” 的美誉", recommend: 9 },
+{ name: "春湾风景区", type: "4A 级景区", address: "广东省阳江市阳春市", lng: 111.878, lat: 22.127, description: "阳春知名景区，融合喀斯特山水、溶洞风光，是影视拍摄取景地，自然景色秀美", recommend: 8 },
+{ name: "咸水矿温泉景区", type: "4A 级景区", address: "广东省阳江市阳西县", lng: 111.778, lat: 21.627, description: "阳江知名咸水矿温泉景区，温泉水质独特，拥有多种特色温泉池，养生度假、休闲娱乐佳选", recommend: 8 },
+{ name: "湖光岩风景区", type: "4A 级景区", address: "广东省湛江市麻章区", lng: 110.378, lat: 21.278, description: "世界地质公园，拥有中国唯一的玛珥湖，湖光山色秀美，地质景观独特，科普与观光兼具", recommend: 10 },
+{ name: "三岭山森林公园", type: "4A 级景区", address: "广东省湛江市霞山区", lng: 110.478, lat: 21.227, description: "湛江城市森林公园，森林覆盖率高，空气清新，有湖泊、山林，是市民休闲、徒步的好去处", recommend: 7 },
+{ name: "遂溪孔子文化城景区", type: "4A 级景区", address: "广东省湛江市遂溪县", lng: 110.278, lat: 21.327, description: "以儒家文化为核心的景区，有孔庙、儒学馆，建筑气势恢宏，是国学教育、文化观光的佳选", recommend: 8 },
+{ name: "茂德公鼓城旅游区", type: "4A 级景区", address: "广东省湛江市雷州市", lng: 110.078, lat: 20.927, description: "以雷州文化为核心的文旅街区，复刻雷州古街风貌，集美食、民俗、购物于一体，雷州风情浓郁", recommend: 8 },
+{ name: "湛江金沙湾滨海休闲旅游区", type: "4A 级景区", address: "广东省湛江市赤坎区", lng: 110.378, lat: 21.278, description: "湛江城市滨海地标，沙滩开阔，椰林成荫，配套滨海步道、休闲设施，是市民休闲、观海的佳选", recommend: 9 },
+{ name: "湛江鼎龙湾国际海洋度假区", type: "4A 级景区", address: "广东省湛江市吴川市", lng: 110.727, lat: 21.427, description: "湛江大型滨海度假区，拥有绵长沙滩、水上乐园、温泉，融合滨海度假、休闲游乐，适合家庭游玩", recommend: 9 },
+{ name: "湛江徐闻港旅游区", type: "4A 级景区", address: "广东省湛江市徐闻县", lng: 110.478, lat: 20.327, description: "琼州海峡重要港口，融合港口观光、滨海休闲，可远眺海南岛，感受渡海文化", recommend: 7 },
+{ name: "湛江雷州西湖公园", type: "4A 级景区", address: "广东省湛江市雷州市", lng: 110.027, lat: 20.978, description: "雷州知名古典公园，湖光山色秀美，有苏公亭、寇公祠等人文景观，融合自然与人文风光", recommend: 7 },
+{ name: "浪漫海岸景区", type: "4A 级景区", address: "广东省茂名市电白区", lng: 111.078, lat: 21.427, description: "茂名知名滨海景区，以浪漫为主题，沙滩绵长，椰林成荫，是婚纱拍摄、滨海度假的佳选", recommend: 9 },
+{ name: "南海旅游岛・中国第一滩景区", type: "4A 级景区", address: "广东省茂名市电白区", lng: 111.027, lat: 21.278, description: "茂名地标性滨海景区，沙滩绵延数公里，海水清澈，配套完善，是滨海休闲、玩水消暑的胜地", recommend: 10 },
+{ name: "冼太夫人故里文化旅游景区", type: "4A 级景区", address: "广东省茂名市电白区", lng: 111.178, lat: 21.527, description: "纪念冼太夫人的景区，有冼太庙、纪念馆，展现冼太夫人的历史功绩，岭南巾帼文化代表", recommend: 9 },
+{ name: "高州仙人洞旅游景区", type: "4A 级景区", address: "广东省茂名市高州市", lng: 110.827, lat: 22.027, description: "茂名山林景区，山林叠翠，瀑布成群，空气清新，夏季凉爽，是避暑、徒步、溯溪的胜地", recommend: 8 },
+{ name: "放鸡岛海上乐园景区", type: "4A 级景区", address: "广东省茂名市电白区", lng: 111.278, lat: 21.227, description: "茂名知名海岛，海水清澈见底，是潜水、海钓、海上游乐的胜地，滨海休闲佳选", recommend: 9 },
+{ name: "大唐荔乡文化旅游区", type: "4A 级景区", address: "广东省茂名市高州市", lng: 110.878, lat: 21.827, description: "以荔枝文化为核心的景区，万亩荔枝林连绵，春季赏花、夏季摘果，感受岭南荔乡文化", recommend: 8 },
+{name: "广垦国家热带农业公园", type: "4A 级景区", address: "广东省茂名市化州市", lng: 110.678, lat: 21.627, description: "国家级热带农业公园，集热带作物种植、科普教育、休闲观光于一体，可体验热带农业风光与农耕文化", recommend: 7},
+{ name: "窦州古城景区", type: "4A 级景区", address: "广东省茂名市信宜市", lng: 110.978, lat: 22.327, description: "岭南千年古城，保留完整的古城墙、古街道，民俗文化浓郁，是历史文化观光的佳选", recommend: 8 },
+{ name: "信宜莲花湖庄园景区", type: "4A 级景区", address: "广东省茂名市信宜市", lng: 110.927, lat: 22.278, description: "茂名综合性文旅景区，有湖泊、花海、游乐设施，融合自然观光、休闲游乐，适合家庭游玩", recommend: 7 },
+{ name: "茂名电白御水古温泉旅游度假区", type: "4A 级景区", address: "广东省茂名市电白区", lng: 111.078, lat: 21.578, description: "茂名老牌温泉度假区，温泉历史悠久，水质优良，配套完善，养生度假、休闲放松的佳选", recommend: 8 },
+{ name: "龙母祖庙景区", type: "4A 级景区", address: "广东省肇庆市德庆县", lng: 111.727, lat: 23.127, description: "岭南龙母文化圣地，建筑气势恢宏，历史悠久，是祈福、感受岭南民俗文化的重要景区", recommend: 9 },
+{ name: "猫爪谷景区", type: "4A 级景区", address: "广东省肇庆市高要区", lng: 112.427, lat: 23.178, description: "肇庆网红乡村文旅景区，有花海、湖泊、萌宠互动，融合乡村休闲、亲子游乐，适合家庭游玩", recommend: 8 },
+{ name: "德庆学宫景区", type: "4A 级景区", address: "广东省肇庆市德庆县", lng: 111.778, lat: 23.178, description: "岭南现存最完整的孔庙之一，建筑风格独特，集儒家文化与岭南建筑艺术于一体，文化底蕴深厚", recommend: 8 },
+{ name: "封开龙山景区", type: "4A 级景区", address: "广东省肇庆市封开县", lng: 111.527, lat: 23.427, description: "肇庆喀斯特山水景区，山林叠翠，溶洞奇特，融合自然观光、溶洞探险，自然风光秀美", recommend: 8 },
+{ name: "四会奇石河景区", type: "4A 级景区", address: "广东省肇庆市四会市", lng: 112.827, lat: 23.627, description: "肇庆山水景区，有奇石、瀑布、溪流，山林清幽，空气清新，是徒步、溯溪、休闲观光的佳选", recommend: 8 },
+{ name: "封开贺江碧道画廊景区", type: "4A 级景区", address: "广东省肇庆市封开县", lng: 111.478, lat: 23.378, description: "依托贺江打造的生态景区，江景秀美，碧道绵长，可游船、骑行、徒步，感受岭南水乡风光", recommend: 9 },
+{ name: "肇庆星湖旅游景区", type: "4A 级景区", address: "广东省肇庆市端州区", lng: 112.478, lat: 23.078, description: "肇庆城市地标，融合七星岩、鼎湖山风光，湖光山色秀美，喀斯特地貌独特，岭南风光代表", recommend: 10 },
+{ name: "肇庆鼎湖山景区", type: "4A 级景区", address: "广东省肇庆市鼎湖区", lng: 112.578, lat: 23.178, description: "岭南四大名山之一，国家级自然保护区，森林覆盖率高，空气清新，有 “天然氧吧” 的美誉", recommend: 10 },
+{ name: "肇庆七星岩景区", type: "4A 级景区", address: "广东省肇庆市端州区", lng: 112.478, lat: 23.078, description: "岭南喀斯特山水代表，七座山峰形似北斗七星，湖光山色交融，亭台楼阁错落，景色绝美", recommend: 10 },
+{ name: "肇庆宋城墙景区", type: "4A 级景区", address: "广东省肇庆市端州区", lng: 112.488, lat: 23.087, description: "岭南现存最完整的宋代城墙，历史悠久，城墙巍峨，登城可俯瞰肇庆城区风光，历史底蕴深厚", recommend: 8 },
+{ name: "古龙峡生态旅游区", type: "4A 级景区", address: "广东省清远市清新区", lng: 113.178, lat: 23.727, description: "清远知名生态旅游区，以漂流为特色，峡谷幽深，瀑布成群，还有玻璃桥、滑道，惊险刺激与自然观光兼具", recommend: 10 },
+{ name: "森波拉度假森林景区", type: "4A 级景区", address: "广东省清远市佛冈县", lng: 113.527, lat: 23.827, description: "清远大型综合性度假区，有主题乐园、温泉、森林观光，融合休闲游乐、养生度假，适合家庭游玩", recommend: 9 },
+{ name: "聚龙湾旅游区", type: "4A 级景区", address: "广东省清远市佛冈县", lng: 113.578, lat: 23.878, description: "清远知名温泉度假区，温泉水质优良，拥有多种特色温泉池，配套游乐设施，休闲养生佳选", recommend: 8 },
+{ name: "熹乐谷温泉旅游区", type: "4A 级景区", address: "广东省清远市佛冈县", lng: 113.478, lat: 23.927, description: "清远高端温泉度假区，温泉融合养生与休闲，配套水上乐园、高尔夫，适合高端度假、家庭游玩", recommend: 9 },
+{ name: "湟川三峡 - 龙潭文化生态旅游区", type: "4A 级景区", address: "广东省清远市连州市", lng: 112.327, lat: 24.927, description: "清远知名峡谷景区，湟川三峡风光秀美，两岸奇峰怪石，可游船观光，融合自然与瑶族文化", recommend: 9 },
+{ name: "连南瑶族自治县万山朝王景区", type: "4A 级景区", address: "广东省清远市连南县", lng: 112.178, lat: 24.727, description: "清远瑶族文化景区，千峰林立，形似群臣朝王，融合瑶族民俗、山水观光，感受瑶族文化魅力", recommend: 8 },
+{ name: "清远黄腾峡生态旅游区", type: "4A 级景区", address: "广东省清远市清城区", lng: 113.278, lat: 23.827, description: "清远以漂流和高空项目为特色的景区，漂流惊险刺激，还有玻璃桥、蹦极，适合年轻群体挑战", recommend: 10 },
+{ name: "清远牛鱼嘴原始生态风景区", type: "4A 级景区", address: "广东省清远市清城区", lng: 113.327, lat: 23.878, description: "清远原始生态景区，山林茂密，溪流潺潺，有玻璃桥、花海，融合自然观光、休闲游乐，适合徒步", recommend: 8 },
+{ name: "清远英德宝晶宫", type: "4A 级景区", address: "广东省清远市英德市", lng: 113.227, lat: 24.127, description: "岭南知名喀斯特溶洞，洞内钟乳石千姿百态，配套玻璃桥、游船，溶洞观光与休闲游乐兼具", recommend: 9 },
+{ name: "清远英德洞天仙境", type: "4A 级景区", address: "广东省清远市英德市", lng: 113.078, lat: 24.278, description: "英德喀斯特溶洞景区，有 “华南第一天坑” 之称，洞内风光独特，可游船观光，自然景色绝美", recommend: 9 },
+{ name: "清远连州地下河", type: "4A 级景区", address: "广东省清远市连州市", lng: 112.278, lat: 24.778, description: "岭南地下河代表，溶洞与地下河交融，乘船游览如入仙境，喀斯特地貌景观独特", recommend: 10 },
+{ name: "清远佛冈森波拉奇妙世界", type: "4A 级景区", address: "广东省清远市佛冈县", lng: 113.527, lat: 23.827, description: "森波拉度假区主题乐园，以远古文化为特色，有游乐设施、演艺表演，适合家庭游玩、亲子互动", recommend: 8 },
+{ name: "潮州古城（含广济桥、韩文公祠）", type: "4A 级景区", address: "广东省潮州市湘桥区", lng: 116.678, lat: 23.627, description: "潮州历史文化核心区，保留完整的古城墙、古街道，广济桥、韩文公祠为核心，潮汕文化浓郁", recommend: 10 },
+{ name: "绿太阳景区", type: "4A 级景区", address: "广东省潮州市潮安区", lng: 116.527, lat: 23.678, description: "潮州综合性文旅景区，有欧式建筑、花海、湖泊、游乐设施，融合观光、游乐，适合家庭游玩", recommend: 7 },
+{ name: "绿岛旅游山庄景区", type: "4A 级景区", address: "广东省潮州市饶平县", lng: 116.927, lat: 23.727, description: "潮州乡村文旅景区，融合山水观光、农家体验、休闲游乐，感受潮汕乡村风光与民俗", recommend: 7 },
+{ name: "广济桥文物旅游景区", type: "4A 级景区", address: "广东省潮州市湘桥区", lng: 116.688, lat: 23.628, description: "中国四大古桥之一，集梁桥、浮桥、拱桥于一体，历史悠久，建筑独特，潮州文化地标", recommend: 10 },
+{ name: "韩文公祠景区", type: "4A 级景区", address: "广东省潮州市湘桥区", lng: 116.698, lat: 23.637, description: "纪念韩愈的祠宇，依山面江而建，建筑气势恢宏，馆藏大量史料，是潮汕文化的重要象征", recommend: 9 },
+{ name: "潮州凤凰天池景区", type: "4A 级景区", address: "广东省潮州市潮安区", lng: 116.578, lat: 23.827, description: "潮州凤凰山脉核心景区，天池风光秀美，周边茶园连绵，是登高、观星、品茶的佳选", recommend: 9 },
+{ name: "揭西黄满寨瀑布旅游区", type: "4A 级景区", address: "广东省揭阳市揭西县", lng: 115.878, lat: 23.427, description: "揭阳知名瀑布景区，瀑布群成群，落差大，气势恢宏，山林叠翠，是徒步、观光的胜地", recommend: 9 },
+{ name: "揭阳进贤门城楼景区", type: "4A 级景区", address: "广东省揭阳市榕城区", lng: 116.378, lat: 23.527, description: "揭阳古城地标，城楼巍峨，历史悠久，登楼可俯瞰揭阳城区风光，是揭阳历史文化的象征", recommend: 8 },
+{ name: "揭阳学宫景区", type: "4A 级景区", address: "广东省揭阳市榕城区", lng: 116.388, lat: 23.537, description: "岭南现存完整的孔庙之一，建筑风格独特，儒家文化底蕴深厚，是国学教育、文化观光的佳选", recommend: 8 },
+{ name: "揭阳阳美翡翠博览中心", type: "4A 级景区", address: "广东省揭阳市揭东区", lng: 116.478, lat: 23.578, description: "中国知名翡翠集散地，集翡翠加工、销售、鉴赏于一体，翡翠文化浓郁，可淘玉赏玉", recommend: 7 },
+{ name: "揭阳望天湖旅游度假区", type: "4A 级景区", address: "广东省揭阳市揭东区", lng: 116.527, lat: 23.627, description: "揭阳综合性度假区，有湖泊、花海、游乐设施、萌宠互动，融合休闲游乐、亲子体验，适合家庭游玩", recommend: 8 },
+{ name: "翔顺金水台温泉小镇景区", type: "4A 级景区", address: "广东省云浮市新兴县", lng: 112.178, lat: 22.527, description: "云浮知名温泉小镇，温泉水质优良，配套酒店、餐饮、游乐，融合温泉养生、休闲度假", recommend: 8 },
+{ name: "广东天露山旅游度假区", type: "4A 级景区", address: "广东省云浮市新兴县", lng: 112.078, lat: 22.627, description: "云浮山林度假区，山林叠翠，瀑布成群，有漂流、玻璃桥、花海，融合自然观光、惊险游乐", recommend: 9 },
+{ name: "六祖故里旅游度假区", type: "4A 级景区", address: "广东省云浮市新兴县", lng: 112.127, lat: 22.478, description: "禅宗六祖慧能故里，国恩寺为核心，佛教文化底蕴深厚，是祈福、禅修、感受禅宗文化的胜地", recommend: 10 },
+{ name: "悦天下生态旅游区", type: "4A 级景区", address: "广东省云浮市新兴县", lng: 112.027, lat: 22.578, description: "云浮生态文旅景区，有湖泊、竹林、温泉，配套网红亲水民宿，融合自然观光、休闲养生", recommend: 8 },
+
+// 广西壮族自治区4A级景区数据模板 - 高德GCJ02坐标系 | 单行展示
+
+{ name: "广西八桂田园", type: "4A级景区", address: "广西南宁市西乡塘区", lng: 108.296, lat: 22.837, description: "现代农业观光示范园，集种植展示、科普教育、休闲采摘于一体，田园风光秀美", recommend: 7 },
+{ name: "南宁市动物园", type: "4A级景区", address: "广西南宁市西乡塘区", lng: 108.352, lat: 22.815, description: "综合性动物园，饲养多种珍稀野生动物，配套游乐设施，是亲子游玩与科普教育的好去处", recommend: 8 },
+{ name: "伊岭岩景区", type: "4A级景区", address: "广西南宁市武鸣区", lng: 108.313, lat: 22.970, description: "喀斯特溶洞景观，洞内钟乳石千姿百态，融合壮族民俗文化，观光体验丰富", recommend: 8 },
+{ name: "良凤江森林旅游区", type: "4A级景区", address: "广西南宁市江南区", lng: 108.300, lat: 22.733, description: "城市森林公园，森林覆盖率高，有菩提大观园、凤凰湖等景观，天然氧吧", recommend: 7 },
+{ name: "广西规划馆景区", type: "4A级景区", address: "广西南宁市良庆区", lng: 108.367, lat: 22.613, description: "展示广西城市规划与发展的专业展馆，高科技展示手段，沉浸式了解广西发展脉络", recommend: 6 },
+{ name: "马山金伦洞景区", type: "4A级景区", address: "广西南宁市马山县", lng: 108.197, lat: 23.367, description: "喀斯特大型溶洞，洞内景观奇幻，钟乳石形态各异，被誉为“广西第一洞”", recommend: 8 },
+{ name: "南宁市人民公园", type: "4A级景区", address: "广西南宁市兴宁区", lng: 108.347, lat: 22.843, description: "南宁老牌城市公园，有镇宁炮台、白龙湖等景点，绿植繁茂，是市民休闲好去处", recommend: 7 },
+{ name: "水锦・顺庄", type: "4A级景区", address: "广西南宁市马山县", lng: 108.233, lat: 23.417, description: "山水生态景区，溪流潺潺、瀑布成群，配套玻璃栈道、民宿，休闲观光佳选", recommend: 8 },
+{ name: "龙门水都景区", type: "4A级景区", address: "广西南宁市西乡塘区", lng: 108.247, lat: 22.867, description: "集山水观光、温泉养生、休闲游乐于一体的综合性景区，配套完善", recommend: 8 },
+{ name: "九龙瀑布景区", type: "4A级景区", address: "广西南宁市横州市", lng: 109.217, lat: 22.617, description: "瀑布群景观，九级瀑布连绵不断，山林叠翠，溪水清澈，自然风光秀美", recommend: 7 },
+{ name: "马山弄拉旅游景区", type: "4A级景区", address: "广西南宁市马山县", lng: 108.217, lat: 23.433, description: "喀斯特生态旅游区，森林覆盖率高，有普陀寺、石峰景观，生态环境绝佳", recommend: 7 },
+{ name: "南宁园博园景区", type: "4A级景区", address: "广西南宁市邕宁区", lng: 108.447, lat: 22.700, description: "展示各地园林特色的主题公园，融合自然景观与人文建筑，四季风光各异", recommend: 9 },
+{ name: "南宁万达茂景区", type: "4A级景区", address: "广西南宁市邕宁区", lng: 108.433, lat: 22.717, description: "大型文旅综合体，有主题乐园、商业街区、文化展馆，适合家庭休闲游乐", recommend: 8 },
+{ name: "那贵坡樱花园", type: "4A级景区", address: "广西南宁市江南区", lng: 108.367, lat: 22.683, description: "以樱花观光为特色的景区，春季樱花烂漫，配套休闲设施，网红打卡胜地", recommend: 7 },
+{ name: "广西百益上河城旅游景区", type: "4A级景区", address: "广西南宁市江南区", lng: 108.350, lat: 22.800, description: "旧厂房改造的文创园区，集文创、餐饮、休闲、展览于一体，文艺气息浓厚", recommend: 8 },
+{ name: "江宇梦想小镇", type: "4A级景区", address: "广西南宁市武鸣区", lng: 108.377, lat: 22.917, description: "欧式风情小镇，建筑典雅，配套花海、湖泊、休闲设施，网红拍照佳选", recommend: 7 },
+{ name: "邕宁区蒲津公园", type: "4A级景区", address: "广西南宁市邕宁区", lng: 108.427, lat: 22.743, description: "依托蒲津古渡而建的公园，有蒲津塔、历史展馆，可俯瞰邕江风光", recommend: 6 },
+{ name: "融晟天河海悦城", type: "4A级景区", address: "广西南宁市江南区", lng: 108.327, lat: 22.767, description: "大型文旅商业综合体，有海洋馆、主题乐园、商业街区，适合家庭游玩", recommend: 8 },
+{ name: "秀美邕江・邕州古韵旅游景区", type: "4A级景区", address: "广西南宁市青秀区", lng: 108.367, lat: 22.817, description: "沿邕江打造的景观带，融合历史文化与滨水休闲，夜景绝美", recommend: 9 },
+{ name: "广西壮族自治区博物馆", type: "4A级景区", address: "广西南宁市青秀区", lng: 108.357, lat: 22.823, description: "展示广西历史文化与民族风情的综合性博物馆，馆藏丰富珍贵文物", recommend: 8 },
+{ name: "南宁市江南公园", type: "4A级景区", address: "广西南宁市江南区", lng: 108.340, lat: 22.783, description: "城市综合性公园，绿植繁茂，有湖泊、花海、休闲步道，市民休闲好去处", recommend: 6 },
+{ name: "南国乡村（广西南宁）", type: "4A级景区", address: "广西南宁市武鸣区", lng: 108.333, lat: 22.950, description: "乡村振兴示范景区，融合田园风光、民俗文化、民宿休闲，体验乡村生活", recommend: 7 },
+{ name: "宾阳县名山生态旅游区", type: "4A级景区", address: "广西南宁市宾阳县", lng: 108.817, lat: 23.117, description: "生态观光景区，有名山、溪流、古村落，自然与人文景观交融", recommend: 6 },
+{ name: "南宁嘉和城景区", type: "4A级景区", address: "广西南宁市兴宁区", lng: 108.433, lat: 22.883, description: "大型休闲度假区，有高尔夫球场、温泉、主题乐园，高端休闲度假佳选", recommend: 8 },
+{ name: "南宁九曲湾温泉景区", type: "4A级景区", address: "广西南宁市兴宁区", lng: 108.450, lat: 22.897, description: "知名温泉景区，温泉水质优良，配套多种特色温泉池，养生休闲好去处", recommend: 8 },
+{ name: "广西药用植物园", type: "4A级景区", address: "广西南宁市青秀区", lng: 108.417, lat: 22.850, description: "中国最大的药用植物园，收集大量药用植物，科普与观光兼具", recommend: 7 },
+{ name: "广西科技馆", type: "4A级景区", address: "广西南宁市青秀区", lng: 108.360, lat: 22.827, description: "科普教育基地，有多种互动体验展品，适合青少年学习科学知识", recommend: 7 },
+{ name: "南宁大明山风景旅游区", type: "4A级景区", address: "广西南宁市武鸣区", lng: 108.483, lat: 23.417, description: "国家级自然保护区，山体巍峨，森林茂密，有瀑布、云海等景观，避暑胜地", recommend: 9 },
+{ name: "广西民族博物馆", type: "4A级景区", address: "广西南宁市青秀区", lng: 108.417, lat: 22.783, description: "展示广西各民族文化的专题博物馆，馆藏民族文物、民俗展品，文化底蕴深厚", recommend: 8 },
+{ name: "南宁市凤岭儿童公园", type: "4A级景区", address: "广西南宁市青秀区", lng: 108.400, lat: 22.847, description: "儿童主题公园，有多种儿童游乐设施，适合亲子游玩", recommend: 7 },
+{ name: "南宁市民歌湖景区", type: "4A级景区", address: "广西南宁市青秀区", lng: 108.367, lat: 22.817, description: "以民歌文化为主题的滨水景区，可乘船游览，欣赏城市夜景与民歌表演", recommend: 8 },
+{ name: "隆安县龙虎山旅游景区", type: "4A级景区", address: "广西南宁市隆安县", lng: 107.767, lat: 23.117, description: "自然保护区，有大量猕猴栖息，森林茂密，溪流潺潺，生态观光佳选", recommend: 7 },
+{ name: "南宁花花大世界景区", type: "4A级景区", address: "广西南宁市武鸣区", lng: 108.317, lat: 22.933, description: "大型生态观光园，有花海、湖泊、拓展设施，休闲观光与亲子互动兼具", recommend: 7 },
+{ name: "南宁上林县大龙湖景区", type: "4A级景区", address: "广西南宁市上林县", lng: 108.683, lat: 23.567, description: "喀斯特湖泊景观，湖光山色秀美，岛屿星罗棋布，游船观光佳选", recommend: 8 },
+{ name: "南宁昆仑关旅游风景区", type: "4A级景区", address: "广西南宁市兴宁区", lng: 108.583, lat: 22.983, description: "红色旅游经典景区，纪念昆仑关战役，有纪念碑、纪念馆，历史教育基地", recommend: 9 },
+{ name: "广西高峰森林公园", type: "4A级景区", address: "广西南宁市兴宁区", lng: 108.383, lat: 22.917, description: "城市近郊森林公园，森林覆盖率高，有徒步步道、休闲设施，天然氧吧", recommend: 7 },
+{ name: "柳州龙潭景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.400, lat: 24.300, description: "融合喀斯特山水与民族文化的景区，有龙潭、雷潭、鼓楼等景观，风光秀美", recommend: 9 },
+{ name: "柳侯公园", type: "4A级景区", address: "广西柳州市城中区", lng: 109.407, lat: 24.317, description: "纪念柳宗元的古典公园，有柳侯祠、罗池、柑香亭，文化底蕴深厚", recommend: 8 },
+{ name: "柳州市立鱼峰风景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.413, lat: 24.310, description: "柳州城市地标，山峰形似立鱼，有刘三姐文化景观，山歌文化发源地", recommend: 8 },
+{ name: "柳州博物馆", type: "4A级景区", address: "广西柳州市城中区", lng: 109.403, lat: 24.327, description: "展示柳州历史文化与民族风情的综合性博物馆，馆藏大量珍贵文物", recommend: 7 },
+{ name: "广西鹿寨香桥岩风景区", type: "4A级景区", address: "广西柳州市鹿寨县", lng: 109.733, lat: 24.417, description: "喀斯特地貌景区，有天生桥、溶洞、峡谷，自然景观独特", recommend: 7 },
+{ name: "柳州市三江县丹洲景区", type: "4A级景区", address: "广西柳州市三江侗族自治县", lng: 109.683, lat: 25.017, description: "江心古村落，保留完整的明清建筑，侗族民俗文化浓郁，休闲观光佳选", recommend: 8 },
+{ name: "柳州文庙景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.417, lat: 24.307, description: "仿古建筑群，气势恢宏，展现儒家文化，是祈福与文化观光的胜地", recommend: 7 },
+{ name: "柳州城市规划展览馆", type: "4A级景区", address: "广西柳州市城中区", lng: 109.427, lat: 24.333, description: "展示柳州城市规划与发展的专业展馆，高科技展示手段，了解城市变迁", recommend: 6 },
+{ name: "柳州市马鹿山奇石博览园景区", type: "4A级景区", address: "广西柳州市城中区", lng: 109.443, lat: 24.347, description: "以奇石为主题的景区，馆藏大量珍贵奇石，奇石文化浓郁", recommend: 7 },
+{ name: "柳州市三江县大侗寨景区", type: "4A级景区", address: "广西柳州市三江侗族自治县", lng: 109.517, lat: 25.033, description: "侗族聚居区，有鼓楼、风雨桥、吊脚楼，侗族民俗文化浓郁，体验独特", recommend: 9 },
+{ name: "柳州市工业博物馆景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.417, lat: 24.293, description: "展示柳州工业发展历程的专题博物馆，工业文化底蕴深厚", recommend: 7 },
+{ name: "柳州市百里柳江旅游景区", type: "4A级景区", address: "广西柳州市城中区", lng: 109.407, lat: 24.317, description: "沿柳江打造的景观带，融合自然风光与城市夜景，可乘船游览", recommend: 9 },
+{ name: "柳州市园博园景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.477, lat: 24.267, description: "展示各地园林特色的主题公园，自然景观与人文建筑交融", recommend: 8 },
+{ name: "柳州市融安石门仙湖旅游景区", type: "4A级景区", address: "广西柳州市融安县", lng: 109.333, lat: 25.217, description: "喀斯特山水景区，有石门、仙湖、溶洞，自然风光秀美", recommend: 8 },
+{ name: "柳州柳城县知青城景区", type: "4A级景区", address: "广西柳州市柳城县", lng: 109.200, lat: 24.617, description: "以知青文化为主题的景区，保留知青生活遗迹，怀旧与休闲兼具", recommend: 6 },
+{ name: "柳州市都乐岩景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.467, lat: 24.250, description: "喀斯特溶洞景区，洞内钟乳石千姿百态，自然景观独特", recommend: 7 },
+{ name: "融水・元宝山龙女沟景区", type: "4A级景区", address: "广西柳州市融水苗族自治县", lng: 109.133, lat: 25.367, description: "苗族风情与山水风光交融的景区，有溪流、瀑布、吊脚楼，民俗体验丰富", recommend: 8 },
+{ name: "柳江县凤凰河生态旅游度假区", type: "4A级景区", address: "广西柳州市柳江区", lng: 109.300, lat: 24.183, description: "生态度假区，有温泉、湖泊、山林，休闲养生与自然观光兼具", recommend: 8 },
+{ name: "柳州市动物园", type: "4A级景区", address: "广西柳州市柳南区", lng: 109.367, lat: 24.267, description: "综合性动物园，饲养多种珍稀野生动物，适合亲子游玩", recommend: 7 },
+{ name: "柳州市融水县老君洞景区", type: "4A级景区", address: "广西柳州市融水苗族自治县", lng: 109.250, lat: 25.117, description: "道教文化景区，有溶洞、道观，自然与人文景观交融", recommend: 7 },
+{ name: "柳州市雀儿山公园景区", type: "4A级景区", address: "广西柳州市柳北区", lng: 109.383, lat: 24.347, description: "城市综合性公园，有雀儿山、湖泊、休闲设施，市民休闲好去处", recommend: 6 },
+{ name: "三江县仙人山景区", type: "4A级景区", address: "广西柳州市三江侗族自治县", lng: 109.433, lat: 25.167, description: "侗族聚居区的山地景区，有茶园、鼓楼，自然风光与民俗文化兼具", recommend: 7 },
+{ name: "融水双龙沟原始森林度假区", type: "4A级景区", address: "广西柳州市融水苗族自治县", lng: 109.200, lat: 25.283, description: "原始森林景区，有玻璃栈道、漂流、萌宠互动，休闲游乐与自然观光兼具", recommend: 9 },
+{ name: "柳州螺蛳粉产业园旅游景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.483, lat: 24.233, description: "以螺蛳粉文化为主题的工业旅游景区，可参观生产流程，体验螺蛳粉文化", recommend: 8 },
+{ name: "祥荷乡韵景区", type: "4A级景区", address: "广西柳州市柳江区", lng: 109.267, lat: 24.133, description: "荷花主题景区，夏季荷花盛开，田园风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "卡乐星球欢乐世界旅游景区", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.477, lat: 24.250, description: "大型主题乐园，有多种惊险刺激的游乐设施，适合年轻群体游玩", recommend: 9 },
+{ name: "鹿寨县中渡古镇", type: "4A级景区", address: "广西柳州市鹿寨县", lng: 109.700, lat: 24.450, description: "千年古镇，保留完整的明清建筑，民俗文化浓郁，历史底蕴深厚", recommend: 8 },
+{ name: "上汽通用五菱宝骏基地", type: "4A级景区", address: "广西柳州市柳江区", lng: 109.317, lat: 24.167, description: "工业旅游景区，可参观汽车生产流程，了解汽车工业文化", recommend: 6 },
+{ name: "螺蛳粉小镇", type: "4A级景区", address: "广西柳州市柳江区", lng: 109.283, lat: 24.150, description: "以螺蛳粉文化为主题的特色小镇，融合工业旅游、民俗体验、休闲游乐", recommend: 8 },
+{ name: "梦呜苗寨民俗文化体验园", type: "4A级景区", address: "广西柳州市融水苗族自治县", lng: 109.217, lat: 25.267, description: "苗族民俗体验景区，可体验苗族歌舞、服饰、美食，沉浸式感受苗族文化", recommend: 8 },
+{ name: "仙草堂生态灵芝透明工厂", type: "4A级景区", address: "广西柳州市融安县", lng: 109.367, lat: 25.183, description: "工业旅游景区，透明化展示灵芝培育与加工流程，科普与观光兼具", recommend: 6 },
+{ name: "克里湾水乐园", type: "4A级景区", address: "广西柳州市鱼峰区", lng: 109.477, lat: 24.250, description: "大型水上乐园，有多种水上游乐设施，夏季玩水消暑的胜地", recommend: 8 },
+{ name: "三江侗天宫文化景区", type: "4A级景区", address: "广西柳州市三江侗族自治县", lng: 109.533, lat: 25.033, description: "侗族文化主题景区，有侗天宫、民俗展馆，展现侗族传统文化", recommend: 7 },
+{ name: "融水风情苗乡景区", type: "4A级景区", address: "广西柳州市融水苗族自治县", lng: 109.233, lat: 25.250, description: "苗族风情旅游区，融合苗族村寨、山水风光、民俗体验，特色鲜明", recommend: 8 },
+{ name: "桂林乐满地休闲世界", type: "4A级景区", address: "广西桂林市兴安县", lng: 110.650, lat: 25.600, description: "大型主题乐园，有游乐设施、温泉、度假酒店，综合性休闲度假胜地", recommend: 9 },
+{ name: "芦笛景区", type: "4A级景区", address: "广西桂林市秀峰区", lng: 110.277, lat: 25.283, description: "以喀斯特溶洞为核心的景区，芦笛岩洞内景观奇幻，被誉为“大自然的艺术之宫”", recommend: 9 },
+{ name: "七星景区", type: "4A级景区", address: "广西桂林市七星区", lng: 110.317, lat: 25.273, description: "桂林经典景区，有七星岩、骆驼山等景观，自然与人文景观交融", recommend: 9 },
+{ name: "桂林冠岩景区", type: "4A级景区", address: "广西桂林市雁山区", lng: 110.433, lat: 25.173, description: "喀斯特溶洞与地下河景区，可乘船、坐火车游览，体验独特", recommend: 8 },
+{ name: "桂林愚自乐园艺术园", type: "4A级景区", address: "广西桂林市雁山区", lng: 110.467, lat: 25.133, description: "融合艺术与自然的景区，有雕塑作品、山水景观，艺术气息浓厚", recommend: 7 },
+{ name: "桂林银子岩旅游度假区", type: "4A级景区", address: "广西桂林市荔浦市", lng: 110.417, lat: 24.767, description: "喀斯特溶洞景区，洞内钟乳石洁白如银，景观奇幻，有“游了银子岩，一世不缺钱”的美誉", recommend: 9 },
+{ name: "桂林古东瀑布景区", type: "4A级景区", address: "广西桂林市灵川县", lng: 110.433, lat: 25.333, description: "可攀爬的瀑布群景区，溪水清澈，山林叠翠，休闲探险佳选", recommend: 8 },
+{ name: "兴安灵渠景区", type: "4A级景区", address: "广西桂林市兴安县", lng: 110.683, lat: 25.633, description: "世界古代水利工程奇迹，沟通湘江与漓江，历史底蕴深厚，文化价值极高", recommend: 10 },
+{ name: "桂林丰鱼岩旅游度假区", type: "4A级景区", address: "广西桂林市荔浦市", lng: 110.283, lat: 24.683, description: "大型喀斯特溶洞景区，洞内景观丰富，配套温泉、酒店，休闲度假佳选", recommend: 8 },
+{ name: "桂林尧山景区", type: "4A级景区", address: "广西桂林市七星区", lng: 110.350, lat: 25.317, description: "桂林最高峰，山体巍峨，森林茂密，登顶可俯瞰桂林全城风光", recommend: 8 },
+{ name: "荔浦荔江湾景区", type: "4A级景区", address: "广西桂林市荔浦市", lng: 110.367, lat: 24.783, description: "喀斯特山水景区，有荔江湾、溶洞、瀑布，自然风光秀美", recommend: 7 },
+{ name: "桂林市南溪山景区", type: "4A级景区", address: "广西桂林市象山区", lng: 110.300, lat: 25.250, description: "桂林老牌景区，有南溪岩、瀑布，山林叠翠，是休闲观光的好去处", recommend: 7 },
+{ name: "龙脊梯田", type: "4A级景区", address: "广西桂林市龙胜各族自治县", lng: 110.017, lat: 25.767, description: "世界知名梯田景观，梯田层叠，四季风光各异，春季灌水、秋季稻黄，景色绝美", recommend: 10 },
+{ name: "桂林丹霞・八角寨景区", type: "4A级景区", address: "广西桂林市资源县", lng: 110.683, lat: 26.133, description: "丹霞地貌景区，八角寨山峰奇特，云海、日出景观绝美，有“丹霞之魂”的美誉", recommend: 9 },
+{ name: "桂林资江・天门山景区", type: "4A级景区", address: "广西桂林市资源县", lng: 110.733, lat: 26.083, description: "资江沿岸山水景区，有天门山、溶洞、峡谷，自然风光秀美，可乘船游览", recommend: 8 },
+{ name: "恭城红岩村景区", type: "4A级景区", address: "广西桂林市恭城瑶族自治县", lng: 110.917, lat: 25.083, description: "瑶族特色村寨，保留完整的瑶族民俗，秋季柿子挂满枝头，田园风光秀美", recommend: 8 },
+{ name: "恭城三庙两馆景区", type: "4A级景区", address: "广西桂林市恭城瑶族自治县", lng: 110.883, lat: 25.067, description: "融合文庙、武庙、周渭祠等古建筑的景区，儒家文化与瑶族文化交融", recommend: 8 },
+{ name: "桂林新区环城水系景区", type: "4A级景区", address: "广西桂林市临桂区", lng: 110.217, lat: 25.217, description: "沿新区打造的滨水景观带，湖光山色秀美，配套休闲步道，市民休闲好去处", recommend: 7 },
+{ name: "红军长征湘江战役纪念园", type: "4A级景区", address: "广西桂林市全州县", lng: 111.017, lat: 25.917, description: "红色旅游经典景区，纪念红军长征湘江战役，有纪念碑、纪念馆，红色教育基地", recommend: 10 },
+{ name: "灵川县大圩古镇景区", type: "4A级景区", address: "广西桂林市灵川县", lng: 110.483, lat: 25.283, description: "千年古镇，保留完整的明清建筑，漓江沿岸风光秀美，民俗文化浓郁", recommend: 8 },
+{ name: "桂林猫儿山景区", type: "4A级景区", address: "广西桂林市兴安县", lng: 110.833, lat: 25.867, description: "华南第一高峰，国家级自然保护区，森林茂密，有云海、日出、瀑布，生态环境绝佳", recommend: 9 },
+
+// 湖北省4A级景区数据模板 - 高德GCJ02坐标系 | 单行展示
+// 2025年12月新增21家
+{ name: "武汉市盘龙城国家考古遗址公园", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.227, lat: 30.703, description: "全国重点文物保护单位，展现商代盘龙城文化，考古遗址与人文景观兼具", recommend: 8 },
+{ name: "武汉市汉阳区知音文化旅游区", type: "4A级景区", address: "湖北省武汉市汉阳区", lng: 114.233, lat: 30.567, description: "以知音文化为核心，含古琴台等景点，文化底蕴深厚，休闲观光佳选", recommend: 7 },
+{ name: "武汉体育中心文化体育公园", type: "4A级景区", address: "湖北省武汉市蔡甸区", lng: 114.167, lat: 30.503, description: "集体育赛事、文化演艺、休闲健身于一体的综合性公园，设施完善", recommend: 7 },
+{ name: "武汉市青山区武钢文化旅游区", type: "4A级景区", address: "湖北省武汉市青山区", lng: 114.383, lat: 30.657, description: "工业旅游景区，展现钢铁工业文化，科普与观光兼具", recommend: 6 },
+{ name: "襄阳市鹿门山旅游区", type: "4A级景区", address: "湖北省襄阳市襄州区", lng: 112.277, lat: 31.903, description: "历史文化名山，孟浩然隐居地，山林秀美，人文景观丰富", recommend: 8 },
+{ name: "襄阳市谷城大薤山景区", type: "4A级景区", address: "湖北省襄阳市谷城县", lng: 111.533, lat: 32.133, description: "避暑名山，森林覆盖率高，云海、溪流景观绝美，休闲度假佳选", recommend: 7 },
+{ name: "宜昌市夷陵区南津关大峡谷", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.183, lat: 30.723, description: "长江三峡起点峡谷，悬崖峭壁、瀑布成群，自然风光雄奇", recommend: 9 },
+{ name: "黄石市华侨城恐龙奇域景区", type: "4A级景区", address: "湖北省黄石市下陆区", lng: 115.057, lat: 30.233, description: "恐龙主题景区，有恐龙化石展示、互动游乐，亲子游玩胜地", recommend: 8 },
+{ name: "黄石市阳新县滴水涯旅游区", type: "4A级景区", address: "湖北省黄石市阳新县", lng: 115.283, lat: 29.873, description: "瀑布景观核心景区，落差大、水量充沛，山林叠翠，生态绝佳", recommend: 7 },
+{ name: "黄石市大冶市上冯古村生态旅游区", type: "4A级景区", address: "湖北省黄石市大冶市", lng: 114.983, lat: 30.133, description: "古村落生态景区，保留明清建筑，田园风光与民俗文化交融", recommend: 7 },
+{ name: "十堰市郧西天河口旅游区", type: "4A级景区", address: "湖北省十堰市郧西县", lng: 110.433, lat: 33.033, description: "天河沿岸景区，融合七夕文化与山水风光，休闲观光佳选", recommend: 7 },
+{ name: "十堰市竹山绿松石文化旅游区", type: "4A级景区", address: "湖北省十堰市竹山县", lng: 110.183, lat: 32.283, description: "以绿松石文化为核心，可参观开采加工，感受特色矿产文化", recommend: 6 },
+{ name: "十堰市沧浪山国家森林公园旅游区", type: "4A级景区", address: "湖北省十堰市郧阳区", lng: 110.833, lat: 32.733, description: "国家级森林公园，森林茂密，溪流潺潺，生态观光与徒步胜地", recommend: 7 },
+{ name: "荆州市石首桃源小镇景区", type: "4A级景区", address: "湖北省荆州市石首市", lng: 112.483, lat: 29.733, description: "田园风情小镇，有花海、民宿、休闲设施，网红打卡胜地", recommend: 8 },
+{ name: "荆门园博园", type: "4A级景区", address: "湖北省荆门市漳河新区", lng: 112.203, lat: 31.033, description: "展示各地园林特色的主题公园，自然景观与人文建筑交融", recommend: 7 },
+{ name: "孝感市云梦祥云湾文化旅游区", type: "4A级景区", address: "湖北省孝感市云梦县", lng: 113.733, lat: 31.033, description: "文化旅游综合体，融合民俗文化、休闲游乐，适合家庭游玩", recommend: 7 },
+{ name: "黄冈市长征国家文化公园英山园区", type: "4A级景区", address: "湖北省黄冈市英山县", lng: 115.633, lat: 30.733, description: "红色旅游景区，展现长征文化，有纪念馆、遗址，红色教育基地", recommend: 8 },
+{ name: "黄冈市武穴市通天河景区", type: "4A级景区", address: "湖北省黄冈市武穴市", lng: 115.533, lat: 29.873, description: "山水生态景区，有通天河、瀑布、溶洞，自然风光秀美", recommend: 7 },
+{ name: "随州市新四军第五师纪念地景区", type: "4A级景区", address: "湖北省随州市曾都区", lng: 113.383, lat: 31.783, description: "红色旅游经典景区，纪念新四军第五师，有纪念馆、旧址", recommend: 8 },
+{ name: "恩施大清江景区", type: "4A级景区", address: "湖北省恩施州恩施市", lng: 109.483, lat: 30.233, description: "清江沿岸核心景区，江水清澈，两岸喀斯特地貌奇特，游船观光佳选", recommend: 9 },
+{ name: "恩施州宣恩县狮子关旅游区", type: "4A级景区", address: "湖北省恩施州宣恩县", lng: 109.433, lat: 29.933, description: "网红打卡景区，有悬浮桥、峡谷溪流，自然风光与游乐体验兼具", recommend: 10 },
+
+// 2024年12月新增24家
+{ name: "宜昌市三峡古兵寨旅游区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.333, lat: 30.833, description: "三峡地区古军事遗址，兵寨遗迹保存完好，历史与山水交融", recommend: 8 },
+{ name: "恩施州宣恩县矅天眼景区", type: "4A级景区", address: "湖北省恩施州宣恩县", lng: 109.383, lat: 29.883, description: "天然天坑景观，形似天眼，周边山林环绕，生态绝佳", recommend: 9 },
+{ name: "神农架大九湖景区", type: "4A级景区", address: "湖北省神农架林区", lng: 110.133, lat: 31.633, description: "高山湿地景观，湖泊星罗棋布，草原、森林交织，风光绝美", recommend: 10 },
+{ name: "襄阳市谷城狮子岩生态旅游区", type: "4A级景区", address: "湖北省襄阳市谷城县", lng: 111.633, lat: 32.083, description: "生态旅游区，有狮子岩、溪流、森林，休闲徒步佳选", recommend: 7 },
+{ name: "黄冈市英山县毕昇纪念园", type: "4A级景区", address: "湖北省黄冈市英山县", lng: 115.683, lat: 30.783, description: "纪念活字印刷术发明者毕昇，文化底蕴深厚，科普与观光兼具", recommend: 8 },
+{ name: "孝感市大悟县白果树湾新四军第五师司令部旧址景区", type: "4A级景区", address: "湖北省孝感市大悟县", lng: 114.133, lat: 31.533, description: "红色旅游景区，新四军第五师司令部旧址，红色教育基地", recommend: 8 },
+{ name: "宜昌市宜都市三峡橘醋文化旅游区", type: "4A级景区", address: "湖北省宜昌市宜都市", lng: 111.483, lat: 30.433, description: "以橘醋文化为核心的工业旅游景区，可参观生产流程，体验特色文化", recommend: 6 },
+{ name: "黄石市大冶铜绿山国家考古遗址公园", type: "4A级景区", address: "湖北省黄石市大冶市", lng: 115.033, lat: 30.083, description: "古铜矿遗址，展现古代采矿冶炼技术，历史价值极高", recommend: 8 },
+{ name: "随州市随县神农部落景区", type: "4A级景区", address: "湖北省随州市随县", lng: 113.233, lat: 31.433, description: "以神农文化为主题，有部落村寨、民俗体验，文化特色鲜明", recommend: 7 },
+{ name: "恩施州来凤县卯洞景区", type: "4A级景区", address: "湖北省恩施州来凤县", lng: 109.333, lat: 29.483, description: "天然溶洞景观，洞口形似卯时，洞内钟乳石奇特", recommend: 8 },
+{ name: "十堰市茅箭区东沟景区", type: "4A级景区", address: "湖北省十堰市茅箭区", lng: 110.883, lat: 32.633, description: "红色旅游与生态旅游结合，有革命旧址、山林溪流", recommend: 7 },
+{ name: "孝感市安陆钱冲古银杏生态旅游区", type: "4A级景区", address: "湖北省孝感市安陆市", lng: 113.833, lat: 31.233, description: "古银杏群落景区，秋季金黄一片，生态与观光兼具", recommend: 9 },
+{ name: "襄阳市黄家湾风景区", type: "4A级景区", address: "湖北省襄阳市襄城区", lng: 112.083, lat: 31.733, description: "三国文化景区，诸葛亮夫人黄月英故里，山水风光秀美", recommend: 7 },
+{ name: "黄冈市蕲春李时珍文化旅游区", type: "4A级景区", address: "湖北省黄冈市蕲春县", lng: 115.433, lat: 30.233, description: "纪念医药学家李时珍，有故居、纪念馆，医药文化浓郁", recommend: 9 },
+{ name: "黄石市大冶市沼山古村桃乡景区", type: "4A级景区", address: "湖北省黄石市大冶市", lng: 114.883, lat: 30.033, description: "桃花观光与古村结合，春季桃花烂漫，田园风情浓郁", recommend: 7 },
+{ name: "十堰市张湾区百龙潭景区", type: "4A级景区", address: "湖北省十堰市张湾区", lng: 110.733, lat: 32.683, description: "瀑布群景区，多级瀑布连绵，山林清幽，休闲观光佳选", recommend: 7 },
+{ name: "武汉野生动物王国景区", type: "4A级景区", address: "湖北省武汉市蔡甸区", lng: 114.083, lat: 30.433, description: "大型野生动物园区，饲养多种珍稀动物，亲子游玩胜地", recommend: 8 },
+{ name: "宜昌市秭归县三峡橙谷・环吒溪河景区", type: "4A级景区", address: "湖北省宜昌市秭归县", lng: 110.933, lat: 30.933, description: "柑橘种植与山水风光结合，秋季硕果累累，田园风情浓郁", recommend: 7 },
+{ name: "荆州市洪湖湿地生态旅游区", type: "4A级景区", address: "湖北省荆州市洪湖市", lng: 113.433, lat: 29.733, description: "大型湿地生态景区，芦苇丛生，鸟类繁多，生态观光佳选", recommend: 9 },
+{ name: "襄阳市保康县六柱垭生态文化旅游区", type: "4A级景区", address: "湖北省襄阳市保康县", lng: 111.133, lat: 31.733, description: "生态文化景区，有山林、溪流、民俗村落，休闲度假佳选", recommend: 7 },
+{ name: "鄂州市梁子湖区凤栖绿洲生态文明博览园", type: "4A级景区", address: "湖北省鄂州市梁子湖区", lng: 114.733, lat: 30.233, description: "生态文明展示园区，融合生态观光、科普教育", recommend: 6 },
+{ name: "黄冈市红安县锦绣铜锣景区", type: "4A级景区", address: "湖北省黄冈市红安县", lng: 114.633, lat: 31.233, description: "红色旅游与民俗文化结合，展现红安革命文化与民俗风情", recommend: 8 },
+{ name: "武汉市江夏区梁子湖蓝波湾景区", type: "4A级景区", address: "湖北省武汉市江夏区", lng: 114.483, lat: 30.283, description: "梁子湖沿岸景区，湖光山色秀美，休闲度假、水上娱乐兼具", recommend: 8 },
+{ name: "咸宁市通城县药姑山・古瑶村景区", type: "4A级景区", address: "湖北省咸宁市通城县", lng: 113.833, lat: 29.233, description: "古瑶族村落，保留瑶族民俗，山林环绕，生态绝佳", recommend: 8 },
+
+// 2023年12月新增17家
+{ name: "潜江市龙湾国家考古遗址公园", type: "4A级景区", address: "湖北省潜江市龙湾镇", lng: 112.833, lat: 30.233, description: "东周时期古遗址，楚文化遗迹丰富，历史价值极高", recommend: 8 },
+{ name: "恩施州恩施鹿院坪景区", type: "4A级景区", address: "湖北省恩施州恩施市", lng: 109.083, lat: 30.283, description: "原始村落生态景区，峡谷幽深，瀑布成群，生态绝佳", recommend: 9 },
+{ name: "荆门市圣境山生态旅游区", type: "4A级景区", address: "湖北省荆门市东宝区", lng: 112.133, lat: 31.133, description: "生态旅游区，有圣境山、森林、溪流，休闲徒步佳选", recommend: 7 },
+{ name: "武汉市东西湖区武汉园博园", type: "4A级景区", address: "湖北省武汉市东西湖区", lng: 114.133, lat: 30.633, description: "集园林展示、休闲娱乐于一体，各地园林特色齐聚", recommend: 8 },
+{ name: "荆门市屈家岭国家考古遗址公园", type: "4A级景区", address: "湖北省荆门市屈家岭管理区", lng: 112.833, lat: 31.133, description: "新石器时代遗址，展现屈家岭文化，考古与观光兼具", recommend: 8 },
+{ name: "恩施州宣恩彭家寨旅游景区", type: "4A级景区", address: "湖北省恩施州宣恩县", lng: 109.233, lat: 29.933, description: "土家族古村落，吊脚楼保存完好，民俗文化浓郁", recommend: 9 },
+{ name: "襄阳华侨城奇幻乐园景区", type: "4A级景区", address: "湖北省襄阳市东津新区", lng: 112.283, lat: 31.783, description: "大型主题乐园，有多种奇幻游乐设施，适合年轻群体与亲子游玩", recommend: 9 },
+{ name: "武汉市黄陂区野村谷景区", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.333, lat: 30.833, description: "乡村生态景区，有田园风光、民宿、休闲设施，体验乡村生活", recommend: 7 },
+{ name: "孝感市安陆盛世闻樱景区", type: "4A级景区", address: "湖北省孝感市安陆市", lng: 113.783, lat: 31.183, description: "樱花观光景区，春季樱花烂漫，网红打卡胜地", recommend: 8 },
+{ name: "仙桃市沔阳小镇景区", type: "4A级景区", address: "湖北省仙桃市排湖风景区", lng: 113.333, lat: 30.333, description: "以沔阳文化为主题的特色小镇，民俗文化与休闲游乐兼具", recommend: 8 },
+{ name: "随州市随县抱朴谷康养旅游区", type: "4A级景区", address: "湖北省随州市随县", lng: 113.433, lat: 31.633, description: "康养旅游区，山林清幽，配套康养设施，休闲养生佳选", recommend: 7 },
+{ name: "咸宁市通山县龙隐山旅游度假区", type: "4A级景区", address: "湖北省咸宁市通山县", lng: 114.533, lat: 29.533, description: "山地旅游度假区，有玻璃栈道、花海、游乐设施，休闲观光兼具", recommend: 8 },
+{ name: "十堰市竹溪县夯土小镇", type: "4A级景区", address: "湖北省十堰市竹溪县", lng: 109.633, lat: 32.033, description: "以夯土建筑为特色的小镇，民俗文化浓郁，田园风光秀美", recommend: 7 },
+{ name: "孝感市大别山（大悟）红叶景区", type: "4A级景区", address: "湖北省孝感市大悟县", lng: 114.233, lat: 31.633, description: "秋季红叶观光景区，漫山红叶，景色绝美", recommend: 9 },
+{ name: "宜昌市仙女吉吉主题公园", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.233, lat: 30.783, description: "儿童主题公园，有多种亲子游乐设施，适合低龄儿童游玩", recommend: 7 },
+{ name: "荆州市松滋市卸甲坪旅游区", type: "4A级景区", address: "湖北省荆州市松滋市", lng: 111.533, lat: 29.533, description: "土家族聚居区，民俗文化与山水风光结合，特色鲜明", recommend: 7 },
+{ name: "恩施州巴东野三关森林花海景区", type: "4A级景区", address: "湖北省恩施州巴东县", lng: 110.133, lat: 30.633, description: "高山森林花海，夏季鲜花盛开，空气清新，避暑佳选", recommend: 8 },
+
+// 武汉市存量4A
+{ name: "辛亥革命武昌起义纪念馆", type: "4A级景区", address: "湖北省武汉市武昌区", lng: 114.317, lat: 30.593, description: "纪念辛亥革命武昌起义，历史底蕴深厚，红色教育基地", recommend: 9 },
+{ name: "归元禅寺", type: "4A级景区", address: "湖北省武汉市汉阳区", lng: 114.250, lat: 30.557, description: "武汉知名佛教寺院，建筑古朴，香火旺盛，祈福观光佳选", recommend: 9 },
+{ name: "武汉科技馆", type: "4A级景区", address: "湖北省武汉市江岸区", lng: 114.327, lat: 30.623, description: "科普教育基地，互动展品丰富，适合青少年学习科学知识", recommend: 8 },
+{ name: "黄鹤楼公园", type: "4A级景区", address: "湖北省武汉市武昌区", lng: 114.307, lat: 30.593, description: "武汉城市地标，江南三大名楼之一，登高可俯瞰长江风光", recommend: 10 },
+{ name: "武汉植物园", type: "4A级景区", address: "湖北省武汉市洪山区", lng: 114.357, lat: 30.543, description: "国家级植物园，收集大量植物品种，科普与观光兼具", recommend: 8 },
+{ name: "武汉欢乐谷", type: "4A级景区", address: "湖北省武汉市洪山区", lng: 114.417, lat: 30.573, description: "大型主题乐园，有多种惊险游乐设施，年轻群体游玩胜地", recommend: 9 },
+{ name: "木兰草原", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.383, lat: 30.883, description: "华中地区最大草原景区，草原风光与民俗表演兼具", recommend: 9 },
+{ name: "木兰天池", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.433, lat: 30.933, description: "山水生态景区，有天池、瀑布、溪流，休闲观光佳选", recommend: 8 },
+{ name: "木兰云雾山", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.533, lat: 31.033, description: "以杜鹃花海为特色，春季杜鹃盛开，山林云雾缭绕", recommend: 9 },
+{ name: "锦里沟", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.583, lat: 31.083, description: "土家族风情景区，有吊脚楼、民俗表演，文化特色鲜明", recommend: 8 },
+{ name: "清凉寨", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.533, lat: 31.133, description: "避暑休闲景区，夏季凉爽，有瀑布、溪流，生态绝佳", recommend: 8 },
+{ name: "农耕年华农业风情园", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.333, lat: 30.783, description: "农业观光园区，体验农耕生活，亲子互动佳选", recommend: 7 },
+{ name: "中国地质大学（武汉）逸夫博物馆", type: "4A级景区", address: "湖北省武汉市洪山区", lng: 114.407, lat: 30.523, description: "地质科普博物馆，馆藏大量地质标本，科普价值高", recommend: 7 },
+{ name: "武汉市科技馆（新馆）", type: "4A级景区", address: "湖北省武汉市江岸区", lng: 114.337, lat: 30.627, description: "现代化科普场馆，高科技展示手段，沉浸式科普体验", recommend: 8 },
+{ name: "横渡长江博物馆", type: "4A级景区", address: "湖北省武汉市江岸区", lng: 114.327, lat: 30.617, description: "纪念横渡长江活动，展现武汉水文化，历史与科普兼具", recommend: 7 },
+{ name: "张之洞与武汉博物馆", type: "4A级景区", address: "湖北省武汉市汉阳区", lng: 114.247, lat: 30.567, description: "纪念张之洞，展现武汉近代工业发展，文化底蕴深厚", recommend: 8 },
+{ name: "黄陂姚家山景区", type: "4A级景区", address: "湖北省武汉市黄陂区", lng: 114.483, lat: 31.183, description: "红色旅游与生态旅游结合，有革命旧址、山林溪流", recommend: 7 },
+{ name: "蔡甸区金龙水寨景区", type: "4A级景区", address: "湖北省武汉市蔡甸区", lng: 114.083, lat: 30.483, description: "水乡生态景区，有湖泊、荷花、休闲设施，休闲观光佳选", recommend: 7 },
+
+// 宜昌市存量4A
+{ name: "车溪民俗旅游区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.183, lat: 30.683, description: "土家族民俗景区，展现传统民俗文化，田园风光秀美", recommend: 8 },
+{ name: "三游洞风景区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.133, lat: 30.783, description: "历史文化景区，白居易等文人墨客游览地，溶洞与人文交融", recommend: 9 },
+{ name: "百里荒高山草原旅游区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.383, lat: 30.983, description: "高山草原景区，夏季凉爽，草原风光与休闲游乐兼具", recommend: 9 },
+{ name: "柴埠溪大峡谷风景区", type: "4A级景区", address: "湖北省宜昌市五峰土家族自治县", lng: 110.833, lat: 30.233, description: "喀斯特峡谷景区，悬崖峭壁、溪流瀑布，自然风光雄奇", recommend: 9 },
+{ name: "三峡大瀑布景区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.433, lat: 30.883, description: "三峡地区最大瀑布，水量充沛，气势恢宏", recommend: 10 },
+{ name: "石牌要塞旅游区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.133, lat: 30.833, description: "长江三峡军事要塞，历史遗迹保存完好，登高观江佳选", recommend: 8 },
+{ name: "昭君村古汉文化游览区", type: "4A级景区", address: "湖北省宜昌市兴山县", lng: 110.733, lat: 31.033, description: "王昭君故里，古汉文化浓郁，民俗与山水交融", recommend: 8 },
+{ name: "金狮洞景区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.233, lat: 30.733, description: "喀斯特溶洞景区，钟乳石形似金狮，景观奇特", recommend: 7 },
+{ name: "情人泉景区", type: "4A级景区", address: "湖北省宜昌市夷陵区", lng: 111.333, lat: 30.833, description: "溶洞与泉水结合，景观浪漫，适合情侣游玩", recommend: 7 },
+{ name: "鸣凤山景区", type: "4A级景区", address: "湖北省宜昌市远安县", lng: 111.633, lat: 31.033, description: "道教文化名山，山体巍峨，道观古朴，祈福观光佳选", recommend: 8 },
+{ name: "链子崖景区", type: "4A级景区", address: "湖北省宜昌市秭归县", lng: 110.883, lat: 30.983, description: "长江沿岸悬崖景区，铁链栈道惊险，自然风光雄奇", recommend: 8 },
+{ name: "武陵峡口生态旅游区", type: "4A级景区", address: "湖北省宜昌市远安县", lng: 111.533, lat: 31.133, description: "峡谷生态景区，有溶洞、溪流、温泉，休闲度假佳选", recommend: 8 },
+
+// 十堰市存量4A
+{ name: "丹江口大坝旅游区", type: "4A级景区", address: "湖北省十堰市丹江口市", lng: 111.033, lat: 32.533, description: "南水北调中线工程核心，大坝气势恢宏，水利观光佳选", recommend: 9 },
+{ name: "太极峡景区", type: "4A级景区", address: "湖北省十堰市丹江口市", lng: 111.233, lat: 32.433, description: "峡谷景观形似太极，自然风光秀美，休闲徒步佳选", recommend: 8 },
+{ name: "九龙瀑风景区", type: "4A级景区", address: "湖北省十堰市郧阳区", lng: 110.933, lat: 32.733, description: "瀑布群景区，九级瀑布连绵，水量充沛，景观绝美", recommend: 9 },
+{ name: "郧阳青龙山恐龙蛋化石群国家地质公园", type: "4A级景区", address: "湖北省十堰市郧阳区", lng: 110.833, lat: 32.833, description: "恐龙蛋化石群遗址，科普价值高，地质观光佳选", recommend: 8 },
+{ name: "五龙河景区", type: "4A级景区", address: "湖北省十堰市郧西县", lng: 110.233, lat: 33.133, description: "溪流峡谷景区，五龙河蜿蜒流淌，山林叠翠", recommend: 8 },
+{ name: "龙潭河景区", type: "4A级景区", address: "湖北省十堰市郧西县", lng: 110.333, lat: 33.083, description: "瀑布溪流景区，龙潭河瀑布群，生态绝佳", recommend: 7 },
+{ name: "沧浪海旅游区", type: "4A级景区", address: "湖北省十堰市丹江口市", lng: 111.133, lat: 32.583, description: "丹江口水库沿岸景区，湖光山色秀美，休闲观光佳选", recommend: 8 },
+{ name: "上津古城景区", type: "4A级景区", address: "湖北省十堰市郧西县", lng: 110.033, lat: 33.333, description: "明清古城，保存完好，历史文化底蕴深厚", recommend: 8 },
+{ name: "虎啸滩景区", type: "4A级景区", address: "湖北省十堰市郧阳区", lng: 110.733, lat: 32.883, description: "峡谷景区，虎啸滩瀑布气势恢宏，自然风光雄奇", recommend: 7 },
+{ name: "女娲山旅游区", type: "4A级景区", address: "湖北省十堰市竹山县", lng: 110.133, lat: 32.433, description: "女娲文化发源地，山体秀美，文化底蕴深厚", recommend: 7 },
+
+// 荆州市存量4A
+{ name: "荆州古城历史文化旅游区", type: "4A级景区", address: "湖北省荆州市荆州区", lng: 112.247, lat: 30.333, description: "明清古城墙环绕，历史文化浓郁，古城观光佳选", recommend: 9 },
+{ name: "楚王车马阵景区", type: "4A级景区", address: "湖北省荆州市荆州区", lng: 112.133, lat: 30.433, description: "楚王陵遗址，车马阵遗迹震撼，历史价值极高", recommend: 9 },
+{ name: "荆州博物馆", type: "4A级景区", address: "湖北省荆州市荆州区", lng: 112.233, lat: 30.347, description: "综合性博物馆，馆藏大量楚文化文物，文化底蕴深厚", recommend: 8 },
+{ name: "洪湖悦兮半岛温泉旅游区", type: "4A级景区", address: "湖北省荆州市洪湖市", lng: 113.483, lat: 29.833, description: "温泉度假景区，温泉水质优良，休闲养生佳选", recommend: 8 },
+{ name: "松滋洈水风景区", type: "4A级景区", address: "湖北省荆州市松滋市", lng: 111.733, lat: 29.833, description: "洈水水库沿岸景区，湖光山色秀美，休闲度假佳选", recommend: 8 },
+{ name: "荆州园博园", type: "4A级景区", address: "湖北省荆州市荆州区", lng: 112.283, lat: 30.383, description: "园林展示景区，各地园林特色齐聚，休闲观光佳选", recommend: 7 },
+
+// 襄阳市存量4A
+{ name: "襄阳唐城景区", type: "4A级景区", address: "湖北省襄阳市襄城区", lng: 112.133, lat: 31.733, description: "仿唐建筑群，气势恢宏，影视拍摄与观光兼具", recommend: 10 },
+{ name: "春秋寨景区", type: "4A级景区", address: "湖北省襄阳市南漳县", lng: 111.733, lat: 31.833, description: "春秋时期古寨遗址，依山而建，历史与山水交融", recommend: 9 },
+{ name: "中国汉城景区", type: "4A级景区", address: "湖北省襄阳市枣阳市", lng: 112.733, lat: 32.133, description: "仿汉建筑群，展现汉代文化，观光与演艺兼具", recommend: 8 },
+{ name: "米公祠景区", type: "4A级景区", address: "湖北省襄阳市樊城区", lng: 112.183, lat: 31.783, description: "纪念米芾，书法文化浓郁，人文景观丰富", recommend: 7 },
+{ name: "南河小三峡景区", type: "4A级景区", address: "湖北省襄阳市谷城县", lng: 111.433, lat: 32.033, description: "南河峡谷景区，三峡风光秀美，游船观光佳选", recommend: 8 },
+{ name: "白水寺风景区", type: "4A级景区", address: "湖北省襄阳市枣阳市", lng: 112.783, lat: 32.233, description: "纪念刘秀，寺庙古朴，历史文化底蕴深厚", recommend: 7 },
+{ name: "无量台风景区", type: "4A级景区", address: "湖北省襄阳市枣阳市", lng: 112.833, lat: 32.183, description: "道教文化景区，无量山风光秀美，祈福观光佳选", recommend: 7 },
+{ name: "熊河风景区", type: "4A级景区", address: "湖北省襄阳市枣阳市", lng: 112.633, lat: 32.033, description: "熊河水库沿岸景区，湖光山色秀美，休闲观光佳选", recommend: 7 },
+
+// 黄冈市存量4A
+{ name: "黄州区遗爱湖景区", type: "4A级景区", address: "湖北省黄冈市黄州区", lng: 114.933, lat: 30.483, description: "城市湖泊景区，湖光山色秀美，休闲观光佳选", recommend: 8 },
+{ name: "红安县黄麻起义和鄂豫皖苏区纪念园", type: "4A级景区", address: "湖北省黄冈市红安县", lng: 114.683, lat: 31.283, description: "红色旅游经典景区，纪念黄麻起义，红色教育基地", recommend: 9 },
+{ name: "麻城市孝感乡文化园", type: "4A级景区", address: "湖北省黄冈市麻城市", lng: 115.083, lat: 31.133, description: "移民文化景区，展现孝感乡移民历史，文化底蕴深厚", recommend: 8 },
+{ name: "罗田县天堂寨景区", type: "4A级景区", address: "湖北省黄冈市罗田县", lng: 115.633, lat: 31.133, description: "大别山主峰景区，山体巍峨，森林茂密，避暑观光佳选", recommend: 10 },
+{ name: "英山县桃花冲风景区", type: "4A级景区", address: "湖北省黄冈市英山县", lng: 115.733, lat: 30.833, description: "桃花观光与山水结合，春季桃花烂漫，夏季凉爽", recommend: 8 },
+{ name: "浠水县三角山旅游度假区", type: "4A级景区", address: "湖北省黄冈市浠水县", lng: 115.233, lat: 30.433, description: "山地旅游度假区，三角山风光秀美，休闲度假佳选", recommend: 8 },
+{ name: "黄梅县五祖寺景区", type: "4A级景区", address: "湖北省黄冈市黄梅县", lng: 115.933, lat: 29.833, description: "佛教禅宗五祖弘忍道场，寺庙古朴，宗教文化浓郁", recommend: 9 },
+{ name: "团风县大崎山森林公园", type: "4A级景区", address: "湖北省黄冈市团风县", lng: 114.833, lat: 30.733, description: "国家级森林公园，森林茂密，休闲徒步佳选", recommend: 7 },
+{ name: "蕲春县三江生态旅游度假区", type: "4A级景区", address: "湖北省黄冈市蕲春县", lng: 115.483, lat: 30.333, description: "生态旅游度假区，有山水、温泉、休闲设施", recommend: 7 },
+{ name: "武穴市希尔寨生态农庄", type: "4A级景区", address: "湖北省黄冈市武穴市", lng: 115.583, lat: 29.933, description: "生态农庄，田园风光与休闲采摘兼具", recommend: 7 },
+{ name: "红安县天台山风景区", type: "4A级景区", address: "湖北省黄冈市红安县", lng: 114.833, lat: 31.433, description: "山地景区，天台山风光秀美，宗教文化与生态结合", recommend: 7 },
+{ name: "麻城市五脑山国家森林公园", type: "4A级景区", address: "湖北省黄冈市麻城市", lng: 115.033, lat: 31.033, description: "国家级森林公园，有花海、森林、寺庙，休闲观光佳选", recommend: 8 },
+{ name: "英山县吴家山国家森林公园", type: "4A级景区", address: "湖北省黄冈市英山县", lng: 115.683, lat: 30.933, description: "国家级森林公园，森林茂密，避暑佳选", recommend: 7 },
+{ name: "罗田县薄刀峰风景区", type: "4A级景区", address: "湖北省黄冈市罗田县", lng: 115.533, lat: 31.083, description: "山地景区，山峰形似薄刀，自然风光雄奇", recommend: 9 },
+
+// 孝感市存量4A
+{ name: "双峰山旅游度假区", type: "4A级景区", address: "湖北省孝感市孝昌县", lng: 113.933, lat: 31.333, description: "山地旅游度假区，双峰山风光秀美，休闲度假佳选", recommend: 8 },
+{ name: "汤池温泉旅游景区", type: "4A级景区", address: "湖北省孝感市应城市", lng: 113.633, lat: 30.933, description: "知名温泉景区，温泉水质优良，养生休闲佳选", recommend: 9 },
+{ name: "白兆山李白文化旅游区", type: "4A级景区", address: "湖北省孝感市安陆市", lng: 113.883, lat: 31.283, description: "李白隐居地，文化底蕴深厚，山水与人文交融", recommend: 8 },
+{ name: "金卉庄园", type: "4A级景区", address: "湖北省孝感市孝南区", lng: 113.983, lat: 30.983, description: "花卉观光与休闲游乐结合，四季花海各异", recommend: 8 },
+{ name: "天紫湖生态旅游度假区", type: "4A级景区", address: "湖北省孝感市孝南区", lng: 113.933, lat: 31.033, description: "湖泊生态度假区，有温泉、休闲设施，养生度假佳选", recommend: 7 },
+{ name: "观音湖生态文化旅游区", type: "4A级景区", address: "湖北省孝感市孝昌县", lng: 113.983, lat: 31.383, description: "湖泊生态景区，观音湖风光秀美，休闲观光佳选", recommend: 8 },
+
+// 咸宁市存量4A
+{ name: "赤壁古战场景区", type: "4A级景区", address: "湖北省咸宁市赤壁市", lng: 113.533, lat: 29.733, description: "三国赤壁之战遗址，历史底蕴深厚，人文观光佳选", recommend: 9 },
+{ name: "陆水湖风景区", type: "4A级景区", address: "湖北省咸宁市赤壁市", lng: 113.433, lat: 29.783, description: "陆水水库沿岸景区，湖光山色秀美，休闲观光佳选", recommend: 8 },
+{ name: "九宫山风景区", type: "4A级景区", address: "湖北省咸宁市通山县", lng: 114.583, lat: 29.583, description: "避暑名山，九宫山风光秀美，夏季凉爽", recommend: 9 },
+{ name: "三江森林温泉度假区", type: "4A级景区", address: "湖北省咸宁市咸安区", lng: 114.333, lat: 29.833, description: "森林温泉景区，温泉与森林结合，养生佳选", recommend: 8 },
+{ name: "楚天瑶池温泉度假村", type: "4A级景区", address: "湖北省咸宁市咸安区", lng: 114.233, lat: 29.883, description: "温泉度假景区，温泉水质优良，休闲养生佳选", recommend: 7 },
+{ name: "嘉鱼县山湖温泉旅游区", type: "4A级景区", address: "湖北省咸宁市嘉鱼县", lng: 113.933, lat: 29.933, description: "滨湖温泉景区，温泉与湖光山色结合", recommend: 7 },
+{ name: "通山县隐水洞地质公园", type: "4A级景区", address: "湖北省咸宁市通山县", lng: 114.633, lat: 29.633, description: "喀斯特溶洞景区，洞内景观奇特，地质科普佳选", recommend: 9 },
+{ name: "赤壁市龙佑温泉度假区", type: "4A级景区", address: "湖北省咸宁市赤壁市", lng: 113.483, lat: 29.833, description: "温泉度假景区，配套完善，休闲养生佳选", recommend: 8 },
+
+// 恩施州存量4A
+{ name: "恩施土司城", type: "4A级景区", address: "湖北省恩施州恩施市", lng: 109.483, lat: 30.333, description: "土家族土司文化景区，建筑古朴，民俗文化浓郁", recommend: 9 },
+{ name: "梭布垭石林", type: "4A级景区", address: "湖北省恩施州恩施市", lng: 109.633, lat: 30.433, description: "喀斯特石林景区，石林形态各异，自然风光独特", recommend: 9 },
+{ name: "地心谷景区", type: "4A级景区", address: "湖北省恩施州建始县", lng: 109.833, lat: 30.633, description: "峡谷地心景观，悬崖栈道惊险，自然风光雄奇", recommend: 10 },
+{ name: "土家女儿城", type: "4A级景区", address: "湖北省恩施州恩施市", lng: 109.433, lat: 30.383, description: "土家族民俗文化街区，民俗表演、美食齐聚", recommend: 9 },
+{ name: "坪坝营生态旅游区", type: "4A级景区", address: "湖北省恩施州咸丰县", lng: 109.133, lat: 29.733, description: "原始森林景区，森林茂密，生态绝佳，避暑佳选", recommend: 8 },
+{ name: "唐崖河风景区", type: "4A级景区", address: "湖北省恩施州咸丰县", lng: 109.033, lat: 29.633, description: "唐崖河沿岸景区，峡谷、溪流、民俗结合", recommend: 8 },
+{ name: "神农溪纤夫文化旅游区", type: "4A级景区", address: "湖北省恩施州巴东县", lng: 110.333, lat: 31.033, description: "神农溪沿岸景区，纤夫文化独特，游船观光佳选", recommend: 9 },
+{ name: "野三河景区", type: "4A级景区", address: "湖北省恩施州建始县", lng: 109.733, lat: 30.733, description: "三河峡谷景区，自然风光秀美，休闲观光佳选", recommend: 8 },
+{ name: "黄金洞景区", type: "4A级景区", address: "湖北省恩施州咸丰县", lng: 108.933, lat: 29.683, description: "大型溶洞景区，洞内景观丰富，地质奇观独特", recommend: 8 },
+
+// 荆门市存量4A
+{ name: "明显陵文化旅游区", type: "4A级景区", address: "湖北省荆门市钟祥市", lng: 112.533, lat: 31.233, description: "明代皇陵，建筑恢宏，历史价值极高", recommend: 9 },
+{ name: "黄仙洞景区", type: "4A级景区", address: "湖北省荆门市钟祥市", lng: 112.433, lat: 31.333, description: "喀斯特溶洞景区，洞内景观奇特，地质科普佳选", recommend: 8 },
+{ name: "绿林山风景区", type: "4A级景区", address: "湖北省荆门市京山市", lng: 113.133, lat: 31.033, description: "绿林起义遗址，山林秀美，历史与生态结合", recommend: 8 },
+{ name: "彭墩乡村世界", type: "4A级景区", address: "湖北省荆门市钟祥市", lng: 112.333, lat: 31.133, description: "乡村旅游景区，田园风光与休闲体验兼具", recommend: 7 },
+{ name: "爱飞客航空小镇", type: "4A级景区", address: "湖北省荆门市漳河新区", lng: 112.183, lat: 31.083, description: "航空主题景区，可体验航空文化，科普与观光兼具", recommend: 7 },
+{ name: "太子山生态旅游区", type: "4A级景区", address: "湖北省荆门市京山市", lng: 112.833, lat: 30.933, description: "生态旅游区，太子山森林茂密，休闲徒步佳选", recommend: 7 },
+
+// 黄石市存量4A
+{ name: "仙岛湖生态旅游风景区", type: "4A级景区", address: "湖北省黄石市阳新县", lng: 115.333, lat: 29.933, description: "千岛湖泊景区，岛屿星罗棋布，湖光山色秀美", recommend: 9 },
+{ name: "雷山风景区", type: "4A级景区", address: "湖北省黄石市大冶市", lng: 114.933, lat: 29.933, description: "山地景区，雷山风光秀美，人文景观丰富", recommend: 7 },
+{ name: "大冶铁矿博物馆", type: "4A级景区", address: "湖北省黄石市铁山区", lng: 115.033, lat: 30.233, description: "铁矿工业博物馆，展现采矿历史，工业文化浓郁", recommend: 7 },
+{ name: "东方山风景区", type: "4A级景区", address: "湖北省黄石市下陆区", lng: 115.083, lat: 30.283, description: "佛教文化名山，东方山风光秀美，祈福观光佳选", recommend: 8 },
+{ name: "西塞山风景区", type: "4A级景区", address: "湖北省黄石市西塞山区", lng: 115.083, lat: 30.283, description: "长江沿岸名山，历史遗迹丰富，登高观江佳选", recommend: 7 },
+
+// 鄂州市存量4A
+{ name: "莲花山旅游区", type: "4A级景区", address: "湖北省鄂州市鄂城区", lng: 114.833, lat: 30.333, description: "莲花山风光秀美，有寺庙、碑林，休闲观光佳选", recommend: 7 },
+{ name: "西山风景区", type: "4A级景区", address: "湖北省鄂州市鄂城区", lng: 114.817, lat: 30.383, description: "鄂州历史名山，西山风光秀美，人文景观丰富", recommend: 7 },
+{ name: "梁子岛生态旅游区", type: "4A级景区", address: "湖北省鄂州市梁子湖区", lng: 114.783, lat: 30.183, description: "梁子湖岛屿景区，湖光山色秀美，生态绝佳", recommend: 8 },
+
+// 随州市存量4A
+{ name: "炎帝故里风景区", type: "4A级景区", address: "湖北省随州市随县", lng: 113.333, lat: 31.733, description: "炎帝神农氏故里，文化底蕴深厚，祈福观光佳选", recommend: 9 },
+{name: "大洪山风景名胜区", type: "4A 级景区", address: "湖北省随州市随县", lng: 113.233, lat: 31.533, description: "国家级风景名胜区，山体巍峨，森林茂密，有溶洞、瀑布，避暑观光佳选", recommend: 9},
+{ name: "西游记公园", type: "4A 级景区", address: "湖北省随州市随县", lng: 113.383, lat: 31.683, description: "西游记主题景区，有游乐设施、民俗表演，亲子游玩胜地", recommend: 8 },
+{ name: "女儿国温泉", type: "4A 级景区", address: "湖北省随州市随县", lng: 113.373, lat: 31.673, description: "温泉度假景区，配套完善，养生休闲佳选", recommend: 8 },
+{ name: "洛阳镇千年银杏谷", type: "4A 级景区", address: "湖北省随州市曾都区", lng: 113.483, lat: 31.733, description: "古银杏群落景区，秋季金黄一片，生态与观光兼具", recommend: 10 },
+// 仙桃、潜江、天门、神农架存量 4A
+{name: "仙桃市梦里水乡文化旅游区", type: "4A 级景区", address: "湖北省仙桃市沙湖镇", lng: 113.533, lat: 30.233, description: "水乡生态景区，湖光山色秀美，民俗文化浓郁", recommend: 8},
+{ name: "潜江市返湾湖国家湿地公园", type: "4A 级景区", address: "湖北省潜江市后湖管理区", lng: 112.883, lat: 30.433, description: "国家级湿地公园，湿地风光秀美，鸟类繁多，生态观光佳选", recommend: 7 },
+{ name: "天门市茶圣故里园", type: "4A 级景区", address: "湖北省天门市竟陵街道", lng: 113.133, lat: 30.633, description: "茶圣陆羽故里，茶文化浓郁，休闲观光与科普兼具", recommend: 8 },
+{ name: "神农架官门山景区", type: "4A 级景区", address: "湖北省神农架林区", lng: 110.433, lat: 31.733, description: "神农架生态景区，动植物资源丰富，科普与观光兼具", recommend: 9 },
+{ name: "神农架神农顶景区", type: "4A 级景区", address: "湖北省神农架林区", lng: 110.333, lat: 31.783, description: "神农架主峰景区，山体巍峨，云海、日出景观绝美", recommend: 10 },
+{ name: "神农架天生桥景区", type: "4A 级景区", address: "湖北省神农架林区", lng: 110.483, lat: 31.683, description: "天生桥景观奇特，溪流瀑布成群，自然风光秀美", recommend: 9 },
+{ name: "神农架野人谷景区", type: "4A 级景区", address: "湖北省神农架林区", lng: 110.233, lat: 31.733, description: "峡谷生态景区，森林茂密，生态绝佳，探险观光佳选", recommend: 8 },
+{ name: "神农架红坪画廊景区", type: "4A 级景区", address: "湖北省神农架林区", lng: 110.183, lat: 31.783, description: "峡谷画廊景观，山水秀美，如诗如画", recommend: 8 },
+// 2022 年 9 月新增 10 家
+{name: "鄂州市西山风景区", type: "4A 级景区", address: "湖北省鄂州市鄂城区", lng: 114.817, lat: 30.383, description: "鄂州历史名山，古迹众多，登高可俯瞰鄂州城区", recommend: 7},
+{ name: "宜昌博物馆", type: "4A 级景区", address: "湖北省宜昌市伍家岗区", lng: 111.333, lat: 30.683, description: "综合性博物馆，馆藏宜昌历史文化文物，科普价值高", recommend: 8 },
+{ name: "恩施州鹤峰县屏山旅游景区", type: "4A 级景区", address: "湖北省恩施州鹤峰县", lng: 109.833, lat: 29.833, description: "网红打卡景区，峡谷清幽，河水清澈，悬浮船体验独特", recommend: 10 },
+{ name: "咸宁市通城县药姑山・古瑶村景区", type: "4A 级景区", address: "湖北省咸宁市通城县", lng: 113.833, lat: 29.233, description: "古瑶族村落，保留瑶族民俗，山林环绕，生态绝佳", recommend: 8 },
+{ name: "襄阳市保康县横冲景区", type: "4A 级景区", address: "湖北省襄阳市保康县", lng: 111.033, lat: 31.833, description: "高山生态景区，夏季凉爽，草原与森林交织", recommend: 7 },
+{ name: "武汉市黄陂区花乡茶谷景区", type: "4A 级景区", address: "湖北省武汉市黄陂区", lng: 114.383, lat: 30.933, description: "茶旅融合景区，茶园连绵，田园风光秀美", recommend: 8 },
+{ name: "恩施州巴东县无源洞景区", type: "4A 级景区", address: "湖北省恩施州巴东县", lng: 110.383, lat: 31.033, description: "溶洞与江景结合，洞内景观奇特，登高观江佳选", recommend: 8 },
+{ name: "孝感市汉川市天屿湖旅游区", type: "4A 级景区", address: "湖北省孝感市汉川市", lng: 113.633, lat: 30.633, description: "湖泊旅游度假区，湖光山色秀美，休闲度假佳选", recommend: 8 },
+{ name: "宜昌市宜都市青林休闲旅游区", type: "4A 级景区", address: "湖北省宜昌市宜都市", lng: 111.433, lat: 30.483, description: "休闲旅游区，田园风光与民俗体验兼具", recommend: 7 },
+{ name: "黄冈市蕲春县李山生态旅游区", type: "4A 级景区", address: "湖北省黄冈市蕲春县", lng: 115.533, lat: 30.183, description: "生态旅游区，山林叠翠，溪流潺潺，休闲观光佳选", recommend: 7 },
+// 2022 年 1 月新增 8 家
+{name: "襄阳古城景区", type: "4A 级景区", address: "湖北省襄阳市襄城区", lng: 112.167, lat: 31.753, description: "明清古城，城墙保存完好，历史文化浓郁", recommend: 9},
+{ name: "荆州海洋世界", type: "4A 级景区", address: "湖北省荆州市沙市区", lng: 112.283, lat: 30.383, description: "海洋主题景区，有海洋馆、水上乐园，亲子游玩胜地", recommend: 8 },
+{ name: "襄阳市谷城县堰河乡村旅游区", type: "4A 级景区", address: "湖北省襄阳市谷城县", lng: 111.583, lat: 32.133, description: "乡村旅游景区，田园风光秀美，民俗文化浓郁", recommend: 7 },
+{ name: "十堰市竹山县太和梅花谷景区", type: "4A 级景区", address: "湖北省十堰市竹山县", lng: 110.033, lat: 32.233, description: "梅花观光景区，冬季梅花盛开，休闲观光佳选", recommend: 8 },
+{ name: "宜昌市长阳县卓尔木桥溪生态旅游度假区", type: "4A 级景区", address: "湖北省宜昌市长阳土家族自治县", lng: 110.833, lat: 30.433, description: "生态旅游度假区，山林清幽，休闲度假佳选", recommend: 8 },
+{ name: "十堰市郧阳恐龙蛋化石群地质公园", type: "4A 级景区", address: "湖北省十堰市郧阳区", lng: 110.833, lat: 32.833, description: "恐龙蛋化石遗址，科普价值高，地质观光佳选", recommend: 8 },
+{ name: "宜昌市远安县三峡龙隐谷生态旅游区", type: "4A 级景区", address: "湖北省宜昌市远安县", lng: 111.683, lat: 31.133, description: "峡谷生态景区，有溶洞、瀑布，自然风光秀美", recommend: 7 },
+{ name: "黄石市龙凤山景区", type: "4A 级景区", address: "湖北省黄石市大冶市", lng: 114.883, lat: 30.083, description: "山地生态景区，龙凤山风光秀美，休闲观光佳选", recommend: 7 },
+// 2022 年 12 月新增 8 家
+{name: "鄂州市杏福园旅游区", type: "4A 级景区", address: "湖北省鄂州市梁子湖区", lng: 114.733, lat: 30.133, description: "田园旅游景区，有花海、采摘园，休闲体验佳选", recommend: 7},
+{ name: "随州市广水市高贵三潭景区", type: "4A 级景区", address: "湖北省随州市广水市", lng: 113.833, lat: 31.583, description: "瀑布群景区，三潭瀑布景观绝美，生态绝佳", recommend: 8 },
+{ name: "十堰市丹江口市武当大明峰景区", type: "4A 级景区", address: "湖北省十堰市丹江口市", lng: 111.083, lat: 32.483, description: "武当山余脉，山峰巍峨，道教文化浓郁", recommend: 9 },
+{ name: "荆州市荆州园博园", type: "4A 级景区", address: "湖北省荆州市荆州区", lng: 112.283, lat: 30.383, description: "园林展示景区，各地园林特色齐聚，休闲观光佳选", recommend: 7 },
+{ name: "鄂州市梁子岛生态旅游区", type: "4A 级景区", address: "湖北省鄂州市梁子湖区", lng: 114.783, lat: 30.183, description: "梁子湖岛屿景区，湖光山色秀美，生态绝佳", recommend: 8 },
+{ name: "荆门市极客公园", type: "4A 级景区", address: "湖北省荆门市漳河新区", lng: 112.233, lat: 31.033, description: "科技主题公园，互动体验丰富，适合青少年游玩", recommend: 7 },
+{ name: "孝感市应城国家矿山公园・爱漫文旅小镇", type: "4A 级景区", address: "湖北省孝感市应城市", lng: 113.683, lat: 30.983, description: "矿山公园与文旅小镇结合，工业文化与休闲游乐兼具", recommend: 7 },
+{ name: "十堰市郧阳区汉江绿谷生态旅游区", type: "4A 级景区", address: "湖北省十堰市郧阳区", lng: 110.883, lat: 32.783, description: "汉江沿岸生态景区，绿谷风光秀美，休闲观光佳选", recommend: 8 },
+// 2021 年新增 11 家
+{name: "恩施州宣恩县仙山贡水旅游区", type: "4A 级景区", address: "湖北省恩施州宣恩县", lng: 109.433, lat: 29.933, description: "贡水沿岸景区，夜景绝美，民俗文化与滨水休闲兼具", recommend: 9},
+{ name: "黄冈市黄梅县禅文化旅游区", type: "4A 级景区", address: "湖北省黄冈市黄梅县", lng: 115.983, lat: 29.883, description: "禅文化景区，寺庙古朴，宗教文化浓郁", recommend: 8 },
+{ name: "宜昌市秭归县三峡竹海生态旅游区", type: "4A 级景区", address: "湖北省宜昌市秭归县", lng: 110.983, lat: 30.883, description: "竹海生态景区，竹林茂密，溪流瀑布成群", recommend: 8 },
+{ name: "咸宁市嘉鱼县山湖温泉旅游区", type: "4A 级景区", address: "湖北省咸宁市嘉鱼县", lng: 113.933, lat: 29.933, description: "滨湖温泉景区，温泉与湖光山色结合", recommend: 7 },
+{ name: "咸宁市赤壁市龙佑温泉度假区", type: "4A 级景区", address: "湖北省咸宁市赤壁市", lng: 113.483, lat: 29.833, description: "温泉度假景区，配套完善，休闲养生佳选", recommend: 8 },
+{ name: "仙桃市沔阳小镇景区", type: "4A 级景区", address: "湖北省仙桃市排湖风景区", lng: 113.333, lat: 30.333, description: "以沔阳文化为主题的特色小镇，民俗文化与休闲游乐兼具", recommend: 8 },
+{ name: "黄冈市罗田县三里畈温泉旅游区", type: "4A 级景区", address: "湖北省黄冈市罗田县", lng: 115.433, lat: 30.833, description: "温泉旅游度假区，温泉与田园风光结合", recommend: 8 },
+{ name: "黄冈市英山县桃花冲风景区", type: "4A 级景区", address: "湖北省黄冈市英山县", lng: 115.733, lat: 30.833, description: "桃花观光与山水结合，春季桃花烂漫，夏季凉爽", recommend: 8 },
+{ name: "宜昌市兴山县昭君故里旅游区", type: "4A 级景区", address: "湖北省宜昌市兴山县", lng: 110.733, lat: 31.033, description: "王昭君故里，古汉文化浓郁，民俗与山水交融", recommend: 8 },
+{ name: "恩施州建始县地心谷景区", type: "4A 级景区", address: "湖北省恩施州建始县", lng: 109.833, lat: 30.633, description: "峡谷地心景观，悬崖栈道惊险，自然风光雄奇", recommend: 10 },
+
+// 长沙市（32家）
+{ name: "长沙世界之窗", type: "4A级景区", address: "湖南省长沙市开福区", lng: 113.033, lat: 28.247, description: "大型主题乐园，集游乐设施、演艺表演、文化展示于一体，适合全家游玩", recommend: 9 },
+{ name: "长沙海底世界", type: "4A级景区", address: "湖南省长沙市开福区", lng: 113.037, lat: 28.250, description: "海洋主题公园，有多种海洋生物展示、海豚表演，亲子科普佳选", recommend: 8 },
+{ name: "长沙天心阁", type: "4A级景区", address: "湖南省长沙市天心区", lng: 112.993, lat: 28.197, description: "长沙古城地标，楼阁古朴，登楼可俯瞰城区，历史文化底蕴深厚", recommend: 8 },
+{ name: "湖南省博物馆", type: "4A级景区", address: "湖南省长沙市开福区", lng: 113.017, lat: 28.227, description: "综合性博物馆，馆藏马王堆汉墓文物等珍贵展品，文化价值极高", recommend: 9 },
+{ name: "雷锋纪念馆", type: "4A级景区", address: "湖南省长沙市望城区", lng: 112.867, lat: 28.267, description: "纪念雷锋同志，红色教育基地，展现雷锋生平事迹与精神", recommend: 8 },
+{ name: "大围山国家森林公园", type: "4A级景区", address: "湖南省长沙市浏阳市", lng: 114.133, lat: 28.333, description: "国家级森林公园，森林茂密，夏季避暑、秋季赏枫，生态绝佳", recommend: 9 },
+{ name: "杨开慧纪念馆", type: "4A级景区", address: "湖南省长沙市长沙县", lng: 113.233, lat: 28.367, description: "纪念杨开慧烈士，红色旅游经典景区，红色教育基地", recommend: 8 },
+{ name: "靖港古镇", type: "4A级景区", address: "湖南省长沙市望城区", lng: 112.833, lat: 28.317, description: "千年古镇，保留明清建筑，水乡风情浓郁，民俗文化体验丰富", recommend: 8 },
+{ name: "浏阳苍坊旅游区（胡耀邦故里）", type: "4A级景区", address: "湖南省长沙市浏阳市", lng: 113.633, lat: 28.333, description: "胡耀邦同志故里，红色旅游与乡村风光结合，文化底蕴深厚", recommend: 9 },
+{ name: "长沙生态动物园", type: "4A级景区", address: "湖南省长沙市天心区", lng: 113.050, lat: 28.083, description: "综合性动物园，饲养多种珍稀动物，适合亲子游玩与科普", recommend: 7 },
+{ name: "湖南省森林植物园", type: "4A级景区", address: "湖南省长沙市雨花区", lng: 113.047, lat: 28.147, description: "大型植物园，收集大量植物品种，四季花海各异，休闲观光佳选", recommend: 8 },
+{ name: "石燕湖生态旅游景区", type: "4A级景区", address: "湖南省长沙市雨花区", lng: 113.167, lat: 28.033, description: "山水生态景区，有湖泊、森林、玻璃桥，休闲游乐与自然观光兼具", recommend: 8 },
+{ name: "宁乡紫龙湾旅游区", type: "4A级景区", address: "湖南省长沙市宁乡市", lng: 112.533, lat: 28.133, description: "温泉度假景区，温泉水质优良，配套休闲设施，养生度假佳选", recommend: 8 },
+{ name: "沩山密印景区", type: "4A级景区", address: "湖南省长沙市宁乡市", lng: 112.383, lat: 28.183, description: "佛教文化景区，密印寺历史悠久，寺庙古朴，山林清幽", recommend: 8 },
+{ name: "洋湖湿地景区", type: "4A级景区", address: "湖南省长沙市岳麓区", lng: 112.933, lat: 28.117, description: "城市湿地公园，湿地风光秀美，生物多样性丰富，休闲散步佳选", recommend: 7 },
+{ name: "关山旅游区", type: "4A级景区", address: "湖南省长沙市宁乡市", lng: 112.683, lat: 28.233, description: "乡村旅游景区，融合田园风光、民俗文化、休闲游乐", recommend: 7 },
+{ name: "黑麋峰国家森林公园", type: "4A级景区", address: "湖南省长沙市望城区", lng: 112.917, lat: 28.417, description: "国家级森林公园，森林茂密，有瀑布、溪流，休闲徒步佳选", recommend: 7 },
+{ name: "千龙湖生态旅游区", type: "4A级景区", address: "湖南省长沙市望城区", lng: 112.733, lat: 28.317, description: "湖泊生态景区，有千龙湖、花海、休闲设施，度假休闲佳选", recommend: 7 },
+{ name: "浏阳秋收起义纪念园", type: "4A级景区", address: "湖南省长沙市浏阳市", lng: 113.683, lat: 28.133, description: "纪念秋收起义，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "新华联铜官窑古镇", type: "4A级景区", address: "湖南省长沙市望城区", lng: 112.767, lat: 28.367, description: "以铜官窑文化为主题的古镇，仿古建筑群，文化体验丰富", recommend: 8 },
+{ name: "田汉文化园", type: "4A级景区", address: "湖南省长沙市长沙县", lng: 113.133, lat: 28.217, description: "纪念田汉先生，融合戏剧文化、休闲观光，文化特色鲜明", recommend: 7 },
+{ name: "滨江文化园", type: "4A级景区", address: "湖南省长沙市开福区", lng: 112.983, lat: 28.233, description: "城市文化园区，有博物馆、图书馆、音乐厅，文化休闲兼具", recommend: 7 },
+{ name: "铜官窑国家考古遗址公园", type: "4A级景区", address: "湖南省长沙市望城区", lng: 112.773, lat: 28.373, description: "唐代铜官窑遗址，考古与观光兼具，历史价值极高", recommend: 8 },
+{ name: "望城光明大观园", type: "4A级景区", address: "湖南省长沙市望城区", lng: 112.817, lat: 28.283, description: "乡村旅游景区，田园风光秀美，亲子体验、休闲游乐兼具", recommend: 7 },
+{ name: "影珠山景区", type: "4A级景区", address: "湖南省长沙市长沙县", lng: 113.283, lat: 28.433, description: "山地景区，影珠山风光秀美，有抗战遗址，红色与生态结合", recommend: 7 },
+{ name: "华谊兄弟（长沙）电影小镇", type: "4A级景区", address: "湖南省长沙市岳麓区", lng: 112.867, lat: 28.183, description: "欧式风情小镇，影视拍摄与观光休闲兼具，网红打卡胜地", recommend: 9 },
+{ name: "天华山旅游景区", type: "4A级景区", address: "湖南省长沙市长沙县", lng: 113.333, lat: 28.317, description: "山地生态景区，山林叠翠，休闲徒步佳选", recommend: 6 },
+{ name: "长沙园林生态园", type: "4A级景区", address: "湖南省长沙市开福区", lng: 113.083, lat: 28.317, description: "城市园林景区，绿植繁茂，花卉观赏、休闲散步佳选", recommend: 7 },
+{ name: "隆平水稻文化园", type: "4A级景区", address: "湖南省长沙市芙蓉区", lng: 113.073, lat: 28.203, description: "以水稻文化为主题，纪念袁隆平院士，科普与观光兼具", recommend: 8 },
+{ name: "周洛大峡谷", type: "4A级景区", address: "湖南省长沙市浏阳市", lng: 113.883, lat: 28.383, description: "峡谷生态景区，瀑布成群，溪流潺潺，生态绝佳", recommend: 8 },
+{ name: "三珍虎园", type: "4A级景区", address: "湖南省长沙市长沙县", lng: 113.383, lat: 28.367, description: "老虎养殖与观赏景区，可近距离接触老虎，科普体验独特", recommend: 7 },
+{ name: "西溪磐石大峡谷风景区", type: "4A级景区", address: "湖南省长沙市浏阳市", lng: 113.833, lat: 28.433, description: "峡谷景区，山石奇特，溪流瀑布，休闲观光佳选", recommend: 7 },
+
+// 衡阳市（13家）
+{ name: "罗荣桓故居纪念馆", type: "4A级景区", address: "湖南省衡阳市衡东县", lng: 112.933, lat: 27.083, description: "纪念罗荣桓元帅，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "石鼓书院", type: "4A级景区", address: "湖南省衡阳市石鼓区", lng: 112.573, lat: 26.903, description: "中国古代四大书院之一，历史文化底蕴深厚，研学观光佳选", recommend: 9 },
+{ name: "蔡伦竹海旅游风景区", type: "4A级景区", address: "湖南省衡阳市耒阳市", lng: 112.833, lat: 26.483, description: "万亩竹海景区，竹林茂密，展现蔡伦造纸文化，生态与人文结合", recommend: 8 },
+{ name: "常宁印山文化旅游区（中国印山）", type: "4A级景区", address: "湖南省衡阳市常宁市", lng: 112.433, lat: 26.333, description: "以印章文化为主题，山石刻满印章，文化特色鲜明", recommend: 8 },
+{ name: "王船山故里生态文化旅游区", type: "4A级景区", address: "湖南省衡阳市衡阳县", lng: 112.433, lat: 26.833, description: "纪念王船山先生，生态与文化结合，休闲观光佳选", recommend: 8 },
+{ name: "夏明翰故里景区", type: "4A级景区", address: "湖南省衡阳市衡阳县", lng: 112.633, lat: 26.883, description: "纪念夏明翰烈士，红色旅游景区，红色教育基地", recommend: 8 },
+{ name: "奇石文化博物馆", type: "4A级景区", address: "湖南省衡阳市蒸湘区", lng: 112.563, lat: 26.883, description: "奇石收藏与展示景区，各类奇石琳琅满目，观赏价值高", recommend: 6 },
+{ name: "东洲岛景区", type: "4A级景区", address: "湖南省衡阳市雁峰区", lng: 112.583, lat: 26.883, description: "湘江中洲岛，风光秀美，有古书院、寺庙，休闲观光佳选", recommend: 8 },
+{ name: "南湖景区", type: "4A级景区", address: "湖南省衡阳市雁峰区", lng: 112.533, lat: 26.833, description: "城市湖泊景区，湖光山色秀美，休闲散步、游船观光佳选", recommend: 7 },
+{ name: "水口山工人运动纪念馆景区", type: "4A级景区", address: "湖南省衡阳市常宁市", lng: 112.483, lat: 26.383, description: "纪念水口山工人运动，红色旅游景区，红色教育基地", recommend: 8 },
+{ name: "紫金山旅游景区", type: "4A级景区", address: "湖南省衡阳市衡山县", lng: 112.733, lat: 27.233, description: "山地生态景区，山林叠翠，休闲观光佳选", recommend: 7 },
+{ name: "岣嵝峰国家森林公园", type: "4A级景区", address: "湖南省衡阳市衡阳县", lng: 112.733, lat: 27.033, description: "国家级森林公园，森林茂密，避暑休闲佳选", recommend: 7 },
+{ name: "南岳衡山（配套4A区）", type: "4A级景区", address: "湖南省衡阳市南岳区", lng: 112.733, lat: 27.283, description: "南岳衡山配套景区，山水风光与宗教文化结合", recommend: 8 },
+
+// 株洲市（9家）
+{ name: "茶陵云阳山景区", type: "4A级景区", address: "湖南省株洲市茶陵县", lng: 113.533, lat: 26.733, description: "山地生态景区，云阳山风光秀美，宗教文化与自然结合", recommend: 7 },
+{ name: "炎陵神农谷景区", type: "4A级景区", address: "湖南省株洲市炎陵县", lng: 113.933, lat: 26.433, description: "峡谷生态景区，瀑布成群，溪流潺潺，生态绝佳", recommend: 9 },
+{ name: "方特欢乐世界", type: "4A级景区", address: "湖南省株洲市云龙示范区", lng: 113.283, lat: 27.833, description: "大型主题乐园，科幻主题鲜明，游乐设施惊险刺激", recommend: 9 },
+{ name: "神农城炎帝文化主题公园", type: "4A级景区", address: "湖南省株洲市天元区", lng: 113.133, lat: 27.833, description: "以炎帝文化为主题，有神农塔、神农湖，文化休闲兼具", recommend: 8 },
+{ name: "红军标语博物馆", type: "4A级景区", address: "湖南省株洲市炎陵县", lng: 113.733, lat: 26.533, description: "收藏大量红军标语，红色旅游景区，红色教育基地", recommend: 8 },
+{ name: "酒仙湖景区", type: "4A级景区", address: "湖南省株洲市攸县", lng: 113.333, lat: 27.033, description: "湖泊生态景区，湖光山色秀美，休闲观光佳选", recommend: 8 },
+{ name: "芋园文化旅游景区", type: "4A级景区", address: "湖南省株洲市炎陵县", lng: 113.783, lat: 26.483, description: "红色旅游景区，红军活动旧址，红色教育基地", recommend: 8 },
+{ name: "茶陵工农兵政府旧址景区", type: "4A级景区", address: "湖南省株洲市茶陵县", lng: 113.583, lat: 26.783, description: "中国第一个县级工农兵政府旧址，红色旅游经典景区", recommend: 9 },
+{ name: "茶陵县花湖谷景区", type: "4A级景区", address: "湖南省株洲市茶陵县", lng: 113.483, lat: 26.683, description: "花海与湖泊结合，田园风光秀美，休闲观光佳选", recommend: 7 },
+
+// 湘潭市（7家）
+{ name: "彭德怀纪念馆", type: "4A级景区", address: "湖南省湘潭市湘潭县", lng: 112.833, lat: 27.733, description: "纪念彭德怀元帅，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "湘乡东山书院旅游区", type: "4A级景区", address: "湖南省湘潭市湘乡市", lng: 112.583, lat: 27.833, description: "清代书院，毛泽东曾在此求学，历史文化底蕴深厚", recommend: 8 },
+{ name: "茅浒水乡度假村", type: "4A级景区", address: "湖南省湘潭市湘乡市", lng: 112.533, lat: 27.783, description: "水乡度假景区，湖光山色秀美，休闲度假佳选", recommend: 7 },
+{ name: "水府旅游区", type: "4A级景区", address: "湖南省湘潭市湘乡市", lng: 112.433, lat: 27.733, description: "湖泊生态景区，水府庙水库风光秀美，休闲观光佳选", recommend: 8 },
+{ name: "盘龙大观园", type: "4A级景区", address: "湖南省湘潭市岳塘区", lng: 112.933, lat: 27.833, description: "大型花卉主题园区，四季花海各异，休闲观光佳选", recommend: 8 },
+{ name: "昭山景区", type: "4A级景区", address: "湖南省湘潭市岳塘区", lng: 113.033, lat: 27.883, description: "山地生态景区，昭山风光秀美，历史文化底蕴深厚", recommend: 7 },
+{ name: "昭山城市海景水上乐园", type: "4A级景区", address: "湖南省湘潭市岳塘区", lng: 113.043, lat: 27.893, description: "水上主题乐园，多种水上游乐设施，夏季消暑佳选", recommend: 8 },
+
+// 邵阳市（8家）
+{ name: "湘窖生态文化酿酒城", type: "4A级景区", address: "湖南省邵阳市大祥区", lng: 111.483, lat: 27.233, description: "工业旅游景区，展现酿酒文化，可参观生产流程、品尝美酒", recommend: 7 },
+{ name: "黄桑生态旅游区", type: "4A级景区", address: "湖南省邵阳市绥宁县", lng: 110.133, lat: 26.633, description: "生态旅游区，森林茂密，溪流瀑布，生态绝佳", recommend: 9 },
+{ name: "武冈云山国家森林公园", type: "4A级景区", address: "湖南省邵阳市武冈市", lng: 110.633, lat: 26.733, description: "国家级森林公园，云山风光秀美，宗教文化与自然结合", recommend: 8 },
+{ name: "新邵白水洞景区", type: "4A级景区", address: "湖南省邵阳市新邵县", lng: 111.433, lat: 27.333, description: "峡谷生态景区，溶洞、瀑布、溪流，自然风光秀美", recommend: 8 },
+{ name: "隆回大花瑶虎形山景区", type: "4A级景区", address: "湖南省邵阳市隆回县", lng: 110.933, lat: 27.333, description: "瑶族聚居区，民俗文化浓郁，梯田、花海风光秀美", recommend: 9 },
+{ name: "蔡锷故里景区", type: "4A级景区", address: "湖南省邵阳市大祥区", lng: 111.473, lat: 27.223, description: "纪念蔡锷将军，历史文化景区，文化底蕴深厚", recommend: 8 },
+{ name: "洞口县古楼驿生态文化旅游区", type: "4A级景区", address: "湖南省邵阳市洞口县", lng: 110.533, lat: 27.033, description: "生态文化景区，古驿道、山林风光，休闲观光佳选", recommend: 7 },
+{ name: "雪峰山国家森林公园", type: "4A级景区", address: "湖南省邵阳市洪江市", lng: 110.133, lat: 27.333, description: "国家级森林公园，雪峰山风光秀美，避暑休闲佳选", recommend: 8 },
+
+// 岳阳市（14家）
+{ name: "任弼时纪念馆", type: "4A级景区", address: "湖南省岳阳市汨罗市", lng: 113.033, lat: 28.733, description: "纪念任弼时同志，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "君山野生荷花世界", type: "4A级景区", address: "湖南省岳阳市君山区", lng: 113.133, lat: 29.333, description: "大型荷花主题景区，夏季荷花盛开，风光绝美", recommend: 8 },
+{ name: "平江纪念馆", type: "4A级景区", address: "湖南省岳阳市平江县", lng: 113.533, lat: 28.733, description: "红色旅游景区，纪念平江起义，红色教育基地", recommend: 8 },
+{ name: "张谷英旅游区", type: "4A级景区", address: "湖南省岳阳市岳阳县", lng: 113.333, lat: 29.033, description: "古村落景区，张谷英村建筑独特，民俗文化浓郁", recommend: 9 },
+{ name: "圣安寺", type: "4A级景区", address: "湖南省岳阳市岳阳楼区", lng: 113.183, lat: 29.333, description: "佛教文化寺庙，历史悠久，建筑恢宏，祈福观光佳选", recommend: 7 },
+{ name: "平江石牛寨景区", type: "4A级景区", address: "湖南省岳阳市平江县", lng: 113.833, lat: 28.833, description: "丹霞地貌景区，玻璃桥、悬崖栈道惊险刺激，自然风光雄奇", recommend: 10 },
+{ name: "天岳幕阜山景区", type: "4A级景区", address: "湖南省岳阳市平江县", lng: 113.933, lat: 28.933, description: "山地生态景区，幕阜山风光秀美，避暑休闲佳选", recommend: 9 },
+{ name: "屈子文化园", type: "4A级景区", address: "湖南省岳阳市汨罗市", lng: 113.083, lat: 28.833, description: "纪念屈原，楚辞文化浓郁，文化观光佳选", recommend: 9 },
+{ name: "湘阴洋沙湖旅游景区", type: "4A级景区", address: "湖南省岳阳市湘阴县", lng: 112.833, lat: 28.633, description: "湖泊旅游度假区，湖光山色秀美，休闲度假佳选", recommend: 8 },
+{ name: "六五零一景区", type: "4A级景区", address: "湖南省岳阳市临湘市", lng: 113.433, lat: 29.433, description: "军事主题景区，地下军事工程震撼，科普观光佳选", recommend: 8 },
+{ name: "左宗棠文化园", type: "4A级景区", address: "湖南省岳阳市湘阴县", lng: 112.883, lat: 28.683, description: "纪念左宗棠，历史文化景区，文化底蕴深厚", recommend: 8 },
+{ name: "五尖山国家森林公园", type: "4A级景区", address: "湖南省岳阳市临湘市", lng: 113.483, lat: 29.483, description: "国家级森林公园，森林茂密，休闲观光佳选", recommend: 7 },
+{ name: "平江起义纪念馆", type: "4A级景区", address: "湖南省岳阳市平江县", lng: 113.583, lat: 28.783, description: "纪念平江起义，红色旅游经典景区，红色教育基地", recommend: 9 },
+{ name: "团湖荷花公园", type: "4A级景区", address: "湖南省岳阳市君山区", lng: 113.183, lat: 29.383, description: "荷花主题公园，荷花品种繁多，夏季赏花佳选", recommend: 7 },
+
+// 常德市（14家）
+{ name: "柳叶湖旅游度假区", type: "4A级景区", address: "湖南省常德市武陵区", lng: 111.733, lat: 29.033, description: "城市湖泊度假区，柳叶湖风光秀美，休闲观光、水上娱乐兼具", recommend: 9 },
+{ name: "清水湖旅游度假区", type: "4A级景区", address: "湖南省常德市汉寿县", lng: 111.933, lat: 28.833, description: "湖泊旅游度假区，配套酒店、高尔夫，高端度假佳选", recommend: 8 },
+{ name: "夹山国家森林公园", type: "4A级景区", address: "湖南省常德市石门县", lng: 111.333, lat: 29.533, description: "国家级森林公园，森林茂密，有夹山寺，宗教与生态结合", recommend: 8 },
+{ name: "花岩溪国家森林公园", type: "4A级景区", address: "湖南省常德市鼎城区", lng: 111.633, lat: 28.733, description: "国家级森林公园，森林茂密，湖泊秀美，休闲观光佳选", recommend: 7 },
+{ name: "常德规划展示馆", type: "4A级景区", address: "湖南省常德市武陵区", lng: 111.783, lat: 29.033, description: "展示常德城市规划，高科技展示手段，了解城市发展", recommend: 6 },
+{ name: "城头山旅游景区", type: "4A级景区", address: "湖南省常德市澧县", lng: 111.733, lat: 29.633, description: "城头山古文化遗址，历史价值极高，考古与观光兼具", recommend: 9 },
+{ name: "林伯渠故居景区", type: "4A级景区", address: "湖南省常德市临澧县", lng: 111.733, lat: 29.433, description: "纪念林伯渠同志，红色旅游景区，红色教育基地", recommend: 8 },
+{ name: "彭山景区", type: "4A级景区", address: "湖南省常德市澧县", lng: 111.833, lat: 29.683, description: "山地生态景区，彭山风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "枫林花海景区", type: "4A级景区", address: "湖南省常德市桃源县", lng: 111.433, lat: 28.933, description: "花海主题景区，四季花海各异，休闲观光佳选", recommend: 8 },
+{ name: "卡乐星球旅游景区", type: "4A级景区", address: "湖南省常德市武陵区", lng: 111.783, lat: 29.083, description: "大型主题乐园，游乐设施丰富，适合年轻群体与亲子游玩", recommend: 9 },
+{ name: "石门龙王洞景区", type: "4A级景区", address: "湖南省常德市石门县", lng: 111.233, lat: 29.633, description: "溶洞景区，洞内钟乳石奇特，景观绝美", recommend: 8 },
+{ name: "津市绿岛蓝湾景区", type: "4A级景区", address: "湖南省常德市津市市", lng: 111.833, lat: 29.633, description: "滨湖生态景区，绿岛蓝湾风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "桃花源旅游管理区（配套区）", type: "4A级景区", address: "湖南省常德市桃源县", lng: 111.333, lat: 28.833, description: "桃花源景区配套区域，田园风光秀美，民俗文化浓郁", recommend: 8 },
+{ name: "夷望溪景区", type: "4A级景区", address: "湖南省常德市桃源县", lng: 111.433, lat: 28.733, description: "溪流生态景区，夷望溪风光秀美，游船观光佳选", recommend: 8 },
+
+// 张家界市（14家）
+{ name: "黄龙洞旅游区", type: "4A级景区", address: "湖南省张家界市武陵源区", lng: 110.433, lat: 29.233, description: "喀斯特溶洞景区，洞内景观奇幻，被誉为“中华最佳洞府”", recommend: 10 },
+{ name: "宝峰湖旅游区", type: "4A级景区", address: "湖南省张家界市武陵源区", lng: 110.483, lat: 29.203, description: "高山湖泊景区，湖光山色秀美，游船观光佳选", recommend: 9 },
+{ name: "土家风情园", type: "4A级景区", address: "湖南省张家界市永定区", lng: 110.483, lat: 29.133, description: "土家族民俗文化景区，吊脚楼、摆手舞，民俗体验丰富", recommend: 8 },
+{ name: "江垭温泉度假村", type: "4A级景区", address: "湖南省张家界市慈利县", lng: 110.833, lat: 29.433, description: "温泉度假景区，温泉水质优良，休闲养生佳选", recommend: 8 },
+{ name: "万福温泉国际旅游度假区", type: "4A级景区", address: "湖南省张家界市慈利县", lng: 110.883, lat: 29.383, description: "高端温泉度假区，配套完善，休闲养生佳选", recommend: 8 },
+{ name: "张家界龙王洞旅游区", type: "4A级景区", address: "湖南省张家界市慈利县", lng: 110.933, lat: 29.483, description: "溶洞景区，洞内钟乳石奇特，景观秀美", recommend: 7 },
+{ name: "张家界大峡谷", type: "4A级景区", address: "湖南省张家界市慈利县", lng: 110.733, lat: 29.233, description: "峡谷生态景区，玻璃桥惊险刺激，自然风光雄奇", recommend: 10 },
+{ name: "贺龙纪念馆", type: "4A级景区", address: "湖南省张家界市桑植县", lng: 110.133, lat: 29.433, description: "纪念贺龙元帅，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "溪布老街非遗文化体验基地", type: "4A级景区", address: "湖南省张家界市武陵源区", lng: 110.473, lat: 29.213, description: "非遗文化街区，土家族民俗体验、特色美食齐聚", recommend: 8 },
+{ name: "桑植九天峰恋景区", type: "4A级景区", address: "湖南省张家界市桑植县", lng: 110.033, lat: 29.533, description: "山地生态景区，山峰秀美，溪流瀑布，生态绝佳", recommend: 8 },
+{ name: "中国工农红军第二方面军长征出发地景区", type: "4A级景区", address: "湖南省张家界市桑植县", lng: 110.183, lat: 29.483, description: "红色旅游景区，长征出发地，红色教育基地", recommend: 9 },
+{ name: "张家界地缝景区", type: "4A级景区", address: "湖南省张家界市慈利县", lng: 110.783, lat: 29.283, description: "地缝峡谷景区，峡谷幽深，自然风光独特", recommend: 9 },
+{ name: "九天洞景区", type: "4A级景区", address: "湖南省张家界市桑植县", lng: 109.933, lat: 29.583, description: "大型溶洞景区，洞内景观丰富，地质奇观独特", recommend: 8 },
+{ name: "峰恋溪景区", type: "4A级景区", address: "湖南省张家界市武陵源区", lng: 110.533, lat: 29.233, description: "溪流生态景区，溪流潺潺，山林叠翠，休闲观光佳选", recommend: 7 },
+
+// 益阳市（10家）
+{ name: "益阳奥林匹克公园", type: "4A级景区", address: "湖南省益阳市赫山区", lng: 112.333, lat: 28.533, description: "城市体育公园，配套完善，休闲健身、观光兼具", recommend: 7 },
+{ name: "山乡巨变第一村旅游区", type: "4A级景区", address: "湖南省益阳市赫山区", lng: 112.433, lat: 28.583, description: "乡村旅游景区，展现乡村巨变，田园风光秀美", recommend: 8 },
+{ name: "安化茶马古道风景区", type: "4A级景区", address: "湖南省益阳市安化县", lng: 110.933, lat: 28.333, description: "茶马古道遗址，山林秀美，体验马帮文化", recommend: 9 },
+{ name: "安化云台山景区", type: "4A级景区", address: "湖南省益阳市安化县", lng: 111.233, lat: 28.233, description: "山地生态景区，云台山风光秀美，茶旅融合", recommend: 8 },
+{ name: "天意木国景区", type: "4A级景区", address: "湖南省益阳市赫山区", lng: 112.383, lat: 28.533, description: "木雕文化景区，各类木雕作品精美，观赏价值高", recommend: 7 },
+{ name: "安化县百花寨景区", type: "4A级景区", address: "湖南省益阳市安化县", lng: 111.033, lat: 28.383, description: "花海生态景区，百花盛开，休闲观光佳选", recommend: 7 },
+{ name: "青云洞・云上九歌溶洞景区", type: "4A级景区", address: "湖南省益阳市安化县", lng: 111.133, lat: 28.283, description: "溶洞景区，洞内景观奇特，配套演艺表演", recommend: 8 },
+{ name: "桃花江竹海景区", type: "4A级景区", address: "湖南省益阳市桃江县", lng: 112.133, lat: 28.533, description: "万亩竹海景区，竹林茂密，休闲观光佳选", recommend: 8 },
+{ name: "茶乡花海生态文化体验园", type: "4A级景区", address: "湖南省益阳市安化县", lng: 111.183, lat: 28.333, description: "茶旅融合景区，茶园与花海结合，休闲体验丰富", recommend: 7 },
+{ name: "梅山文化生态园", type: "4A级景区", address: "湖南省益阳市安化县", lng: 111.083, lat: 28.433, description: "梅山文化景区，民俗文化浓郁，休闲观光佳选", recommend: 7 },
+
+// 郴州市（18家）
+{ name: "苏仙岭旅游区", type: "4A级景区", address: "湖南省郴州市苏仙区", lng: 113.033, lat: 25.783, description: "道教文化名山，苏仙岭风光秀美，历史文化底蕴深厚", recommend: 9 },
+{ name: "汝城福泉山庄", type: "4A级景区", address: "湖南省郴州市汝城县", lng: 113.633, lat: 25.533, description: "温泉度假景区，温泉水质优良，休闲养生佳选", recommend: 8 },
+{ name: "莽山国家森林公园", type: "4A级景区", address: "湖南省郴州市宜章县", lng: 112.933, lat: 25.333, description: "国家级森林公园，森林茂密，瀑布成群，生态绝佳", recommend: 10 },
+{ name: "万华岩旅游区", type: "4A级景区", address: "湖南省郴州市北湖区", lng: 112.833, lat: 25.733, description: "溶洞景区，洞内钟乳石奇特，景观秀美", recommend: 8 },
+{ name: "王仙岭旅游区", type: "4A级景区", address: "湖南省郴州市苏仙区", lng: 113.083, lat: 25.733, description: "山地生态景区，瀑布溪流，休闲观光佳选", recommend: 7 },
+{ name: "九龙江国家森林公园", type: "4A级景区", address: "湖南省郴州市汝城县", lng: 113.833, lat: 25.433, description: "国家级森林公园，森林茂密，生态绝佳", recommend: 8 },
+{ name: "宝山工矿旅游景区", type: "4A级景区", address: "湖南省郴州市桂阳县", lng: 112.733, lat: 25.733, description: "工业旅游景区，展现采矿文化，科普与观光兼具", recommend: 7 },
+{ name: "飞天山国家地质公园", type: "4A级景区", address: "湖南省郴州市苏仙区", lng: 113.183, lat: 25.633, description: "丹霞地貌景区，自然风光雄奇，地质科普佳选", recommend: 9 },
+{ name: "安仁稻田公园", type: "4A级景区", address: "湖南省郴州市安仁县", lng: 113.233, lat: 26.733, description: "稻田主题景区，田园风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "永兴板梁古村旅游区", type: "4A级景区", address: "湖南省郴州市永兴县", lng: 113.283, lat: 26.133, description: "古村落景区，板梁古村建筑独特，民俗文化浓郁", recommend: 8 },
+{ name: "西瑶绿谷旅游区", type: "4A级景区", address: "湖南省郴州市临武县", lng: 112.533, lat: 25.333, description: "生态旅游区，森林茂密，休闲观光佳选", recommend: 7 },
+{ name: "汝城沙洲红色旅游景区", type: "4A级景区", address: "湖南省郴州市汝城县", lng: 113.683, lat: 25.483, description: "红色旅游景区，半条被子故事发生地，红色教育基地", recommend: 9 },
+{ name: "天堂温泉景区", type: "4A级景区", address: "湖南省郴州市北湖区", lng: 112.933, lat: 25.783, description: "温泉度假景区，配套完善，休闲养生佳选", recommend: 8 },
+{ name: "资兴回龙山景区", type: "4A级景区", address: "湖南省郴州市资兴市", lng: 113.433, lat: 25.933, description: "山地生态景区，回龙山风光秀美，云海、日出景观绝美", recommend: 9 },
+{ name: "东江湖景区（配套区）", type: "4A级景区", address: "湖南省郴州市资兴市", lng: 113.333, lat: 25.983, description: "东江湖配套景区，湖光山色秀美，休闲观光佳选", recommend: 8 },
+{ name: "便江风景区", type: "4A级景区", address: "湖南省郴州市永兴县", lng: 113.133, lat: 26.233, description: "溪流生态景区，便江风光秀美，游船观光佳选", recommend: 8 },
+{ name: "阳山古村景区", type: "4A级景区", address: "湖南省郴州市桂阳县", lng: 112.783, lat: 25.683, description: "古村落景区，阳山古村建筑独特，民俗文化浓郁", recommend: 7 },
+
+// 永州市（19家）
+{ name: "九嶷山舜帝陵景区", type: "4A级景区", address: "湖南省永州市宁远县", lng: 111.733, lat: 25.333, description: "纪念舜帝，历史文化底蕴深厚，祈福观光佳选", recommend: 9 },
+{ name: "祁阳浯溪碑林景区", type: "4A级景区", address: "湖南省永州市祁阳市", lng: 111.833, lat: 26.533, description: "碑林文化景区，历代碑刻众多，文化价值极高", recommend: 9 },
+{ name: "双牌阳明山旅游区", type: "4A级景区", address: "湖南省永州市双牌县", lng: 111.633, lat: 26.133, description: "山地生态景区，阳明山风光秀美，避暑休闲佳选", recommend: 9 },
+{ name: "柳宗元文化旅游区", type: "4A级景区", address: "湖南省永州市零陵区", lng: 111.633, lat: 26.233, description: "纪念柳宗元，历史文化景区，文化底蕴深厚", recommend: 8 },
+{ name: "东安舜皇山旅游区", type: "4A级景区", address: "湖南省永州市东安县", lng: 111.333, lat: 26.433, description: "山地生态景区，舜皇山风光秀美，生态绝佳", recommend: 8 },
+{ name: "桐子坳景区", type: "4A级景区", address: "湖南省永州市双牌县", lng: 111.733, lat: 26.033, description: "银杏主题景区，秋季银杏金黄，风光绝美", recommend: 9 },
+{ name: "江永勾蓝瑶寨景区", type: "4A级景区", address: "湖南省永州市江永县", lng: 111.333, lat: 25.333, description: "瑶族古村落，民俗文化浓郁，休闲观光佳选", recommend: 8 },
+{ name: "零陵东山景区", type: "4A级景区", address: "湖南省永州市零陵区", lng: 111.683, lat: 26.283, description: "山地文化景区，东山风光秀美，历史文化底蕴深厚", recommend: 7 },
+{ name: "蓝山云冰山景区", type: "4A级景区", address: "湖南省永州市蓝山县", lng: 112.133, lat: 25.033, description: "山地生态景区，云冰山风光秀美，云海、雾凇景观绝美", recommend: 9 },
+{ name: "宁远下灌旅游区", type: "4A级景区", address: "湖南省永州市宁远县", lng: 111.833, lat: 25.433, description: "古村落景区，下灌村建筑独特，民俗文化浓郁", recommend: 8 },
+{ name: "道县濂溪故里景区", type: "4A级景区", address: "湖南省永州市道县", lng: 111.533, lat: 25.533, description: "纪念周敦颐，历史文化景区，文化底蕴深厚", recommend: 8 },
+{ name: "陈树湘红色文化园", type: "4A级景区", address: "湖南省永州市道县", lng: 111.583, lat: 25.483, description: "纪念陈树湘烈士，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "祁阳市石洞源景区", type: "4A级景区", address: "湖南省永州市祁阳市", lng: 111.933, lat: 26.633, description: "生态文化景区，石洞源风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "新田龙家大院景区", type: "4A级景区", address: "湖南省永州市新田县", lng: 112.233, lat: 25.833, description: "古村落景区，龙家大院建筑独特，民俗文化浓郁", recommend: 7 },
+{ name: "金洞三公垒瀑布群景区", type: "4A级景区", address: "湖南省永州市祁阳市", lng: 111.733, lat: 26.183, description: "瀑布群景区，三级瀑布景观绝美，生态绝佳", recommend: 8 },
+{ name: "双牌青龙岩景区", type: "4A级景区", address: "湖南省永州市双牌县", lng: 111.583, lat: 26.083, description: "溶洞景区，洞内钟乳石奇特，景观秀美", recommend: 8 },
+{ name: "千家峒景区", type: "4A级景区", address: "湖南省永州市江永县", lng: 111.233, lat: 25.233, description: "瑶族聚居区，民俗文化浓郁，休闲观光佳选", recommend: 8 },
+{ name: "柳子庙景区", type: "4A级景区", address: "湖南省永州市零陵区", lng: 111.633, lat: 26.233, description: "纪念柳宗元，历史文化景区，文化底蕴深厚", recommend: 8 },
+{ name: "周家大院景区", type: "4A级景区", address: "湖南省永州市零陵区", lng: 111.533, lat: 26.333, description: "古村落景区，周家大院建筑独特，民俗文化浓郁", recommend: 7 },
+
+// 怀化市（23家）
+{ name: "中国人民抗日战争胜利受降纪念馆", type: "4A级景区", address: "湖南省怀化市芷江县", lng: 109.733, lat: 27.433, description: "纪念抗战胜利受降，红色旅游经典景区，红色教育基地", recommend: 10 },
+{ name: "通道万佛山风景名胜区", type: "4A级景区", address: "湖南省怀化市通道侗族自治县", lng: 109.733, lat: 26.133, description: "丹霞地貌景区，万佛山风光秀美，生态绝佳", recommend: 9 },
+{ name: "黔阳古城", type: "4A级景区", address: "湖南省怀化市洪江市", lng: 110.133, lat: 27.333, description: "千年古城，保留明清建筑，民俗文化浓郁", recommend: 9 },
+{ name: "洪江古商城", type: "4A级景区", address: "湖南省怀化市洪江市", lng: 110.183, lat: 27.283, description: "明清商城遗址，古建筑保存完好，商业文化浓郁", recommend: 10 },
+{ name: "通道皇都侗文化村旅游区", type: "4A级景区", address: "湖南省怀化市通道侗族自治县", lng: 109.633, lat: 26.233, description: "侗族聚居区，民俗文化浓郁，休闲观光佳选", recommend: 8 },
+{ name: "沅陵凤滩景区", type: "4A级景区", address: "湖南省怀化市沅陵县", lng: 110.333, lat: 28.433, description: "水利生态景区，凤滩水电站风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "通道转兵纪念地", type: "4A级景区", address: "湖南省怀化市通道侗族自治县", lng: 109.783, lat: 26.333, description: "红色旅游景区，通道转兵旧址，红色教育基地", recommend: 9 },
+{ name: "通道芋头古侗寨景区", type: "4A级景区", address: "湖南省怀化市通道侗族自治县", lng: 109.533, lat: 26.183, description: "侗族古村落，建筑独特，民俗文化浓郁", recommend: 8 },
+{ name: "黄岩生态旅游区", type: "4A级景区", address: "湖南省怀化市鹤城区", lng: 109.933, lat: 27.533, description: "山地生态景区，黄岩风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "溆浦穿岩山景区", type: "4A级景区", address: "湖南省怀化市溆浦县", lng: 110.733, lat: 27.933, description: "山地生态景区，穿岩山风光秀美，休闲观光佳选", recommend: 8 },
+{ name: "九丰现代农博园景区", type: "4A级景区", address: "湖南省怀化市鹤城区", lng: 109.883, lat: 27.583, description: "现代农业观光园，科普与观光兼具", recommend: 7 },
+{ name: "靖州飞山景区", type: "4A级景区", address: "湖南省怀化市靖州苗族侗族自治县", lng: 109.633, lat: 26.533, description: "山地文化景区，飞山风光秀美，宗教文化浓郁", recommend: 7 },
+{ name: "会同粟裕故里景区", type: "4A级景区", address: "湖南省怀化市会同县", lng: 109.733, lat: 26.833, description: "纪念粟裕大将，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "新晃龙溪古镇景区", type: "4A级景区", address: "湖南省怀化市新晃侗族自治县", lng: 109.133, lat: 27.333, description: "侗族古村落，民俗文化浓郁，休闲观光佳选", recommend: 7 },
+{ name: "沅陵龙兴讲寺景区", type: "4A级景区", address: "湖南省怀化市沅陵县", lng: 110.433, lat: 28.483, description: "佛教文化寺庙，历史悠久，建筑恢宏", recommend: 8 },
+{name: "麻阳代远文化旅游景区", type: "4A 级景区", address: "湖南省怀化市麻阳苗族自治县", lng: 109.833, lat: 27.733, description: "纪念滕代远同志，红色旅游与民俗文化结合，文化底蕴深厚", recommend: 8},
+{ name: "中方荆坪古村景区", type: "4A 级景区", address: "湖南省怀化市中方县", lng: 109.933, lat: 27.433, description: "古村落景区，荆坪古村建筑独特，民俗文化浓郁", recommend: 8 },
+{ name: "会同高椅古村景区", type: "4A 级景区", address: "湖南省怀化市会同县", lng: 109.833, lat: 26.933, description: "侗族古村落，高椅古村建筑独特，民俗文化浓郁", recommend: 9 },
+{ name: "沅陵二酉山景区", type: "4A 级景区", address: "湖南省怀化市沅陵县", lng: 110.533, lat: 28.633, description: "历史文化名山，二酉山风光秀美，文化底蕴深厚", recommend: 8 },
+{ name: "辰溪酉庄・大酉书院景区", type: "4A 级景区", address: "湖南省怀化市辰溪县", lng: 110.133, lat: 28.033, description: "书院文化景区，大酉书院历史悠久，文化底蕴深厚", recommend: 7 },
+{ name: "思蒙碧水丹霞景区", type: "4A 级景区", address: "湖南省怀化市溆浦县", lng: 110.533, lat: 27.983, description: "丹霞地貌景区，碧水丹霞风光秀美，休闲观光佳选", recommend: 8 },
+{ name: "岩门古堡寨景区", type: "4A 级景区", address: "湖南省怀化市麻阳苗族自治县", lng: 109.783, lat: 27.833, description: "古堡寨景区，建筑独特，历史文化底蕴深厚", recommend: 7 },
+{ name: "黔中郡遗址景区", type: "4A 级景区", address: "湖南省怀化市沅陵县", lng: 110.483, lat: 28.533, description: "黔中郡遗址，历史价值极高，考古与观光兼具", recommend: 8 },
+// 娄底市（9 家）
+{name: "梅山龙宫景区", type: "4A 级景区", address: "湖南省娄底市新化县", lng: 111.233, lat: 27.733, description: "喀斯特溶洞景区，洞内景观奇幻，被誉为 “亚洲最美溶洞”", recommend: 10 },
+{ name: "双峰曾国藩故居旅游区", type: "4A 级景区", address: "湖南省娄底市双峰县", lng: 112.033, lat: 27.433, description: "曾国藩故居，历史文化底蕴深厚，建筑恢宏", recommend: 9 },
+{ name: "紫鹊界梯田景区", type: "4A 级景区", address: "湖南省娄底市新化县", lng: 111.433, lat: 27.833, description: "世界灌溉工程遗产，梯田层叠，四季风光各异", recommend: 10 },
+{ name: "湄江旅游区", type: "4A 级景区", address: "湖南省娄底市涟源市", lng: 111.633, lat: 27.733, description: "山水生态景区，湄江风光秀美，休闲观光佳选", recommend: 8 },
+{ name: "三联峒景区", type: "4A 级景区", address: "湖南省娄底市新化县", lng: 111.333, lat: 27.933, description: "山地生态景区，瀑布溪流，休闲观光佳选", recommend: 8 },
+{ name: "新化大熊山景区", type: "4A 级景区", address: "湖南省娄底市新化县", lng: 111.133, lat: 28.133, description: "国家级森林公园，森林茂密，有大熊山，生态绝佳", recommend: 9 },
+{ name: "蔡和森同志纪念馆・故居景区", type: "4A 级景区", address: "湖南省娄底市双峰县", lng: 112.083, lat: 27.483, description: "纪念蔡和森同志，红色旅游景区，红色教育基地", recommend: 9 },
+{ name: "涟源龙山景区", type: "4A 级景区", address: "湖南省娄底市涟源市", lng: 111.733, lat: 27.633, description: "山地生态景区，龙山风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "博盛生态体验园景区", type: "4A 级景区", address: "湖南省娄底市涟源市", lng: 111.683, lat: 27.683, description: "生态体验园，休闲游乐、亲子互动兼具", recommend: 7 },
+// 湘西土家族苗族自治州（15 家）
+{name: "凤凰古城旅游区", type: "4A 级景区", address: "湖南省湘西州凤凰县", lng: 109.433, lat: 27.933, description: "中国最美古城之一，沱江穿城而过，古建筑保存完好", recommend: 10},
+{ name: "乾州古城景区", type: "4A 级景区", address: "湖南省湘西州吉首市", lng: 109.733, lat: 28.333, description: "千年古城，民俗文化浓郁，休闲观光佳选", recommend: 8 },
+{ name: "南华山神凤文化景区", type: "4A 级景区", address: "湖南省湘西州凤凰县", lng: 109.483, lat: 27.983, description: "神凤文化主题景区，南华山风光秀美，文化特色鲜明", recommend: 7 },
+{ name: "猛洞河漂流景区", type: "4A 级景区", address: "湖南省湘西州永顺县", lng: 109.833, lat: 29.033, description: "漂流主题景区，猛洞河水流湍急，惊险刺激", recommend: 9 },
+{ name: "芙蓉镇景区", type: "4A 级景区", address: "湖南省湘西州永顺县", lng: 109.883, lat: 28.833, description: "挂在瀑布上的古镇，自然风光与民俗文化结合", recommend: 10 },
+{ name: "红石林景区", type: "4A 级景区", address: "湖南省湘西州古丈县", lng: 109.933, lat: 28.633, description: "红色石林地貌，景观独特，地质科普佳选", recommend: 9 },
+{ name: "凤凰奇梁洞景区", type: "4A 级景区", address: "湖南省湘西州凤凰县", lng: 109.383, lat: 27.883, description: "溶洞景区，洞内景观奇幻，休闲观光佳选", recommend: 8 },
+{ name: "浦市古镇景区", type: "4A 级景区", address: "湖南省湘西州泸溪县", lng: 109.833, lat: 28.533, description: "千年古镇，民俗文化浓郁，休闲观光佳选", recommend: 8 },
+{ name: "湘西自治州老司城景区", type: "4A 级景区", address: "湖南省湘西州永顺县", lng: 109.733, lat: 28.933, description: "世界文化遗产，老司城遗址，历史价值极高", recommend: 9 },
+{ name: "湘西州里耶古城景区", type: "4A 级景区", address: "湖南省湘西州龙山县", lng: 109.433, lat: 29.633, description: "秦代古城遗址，历史价值极高，考古与观光兼具", recommend: 9 },
+{ name: "湘西民族文化园景区", type: "4A 级景区", address: "湖南省湘西州吉首市", lng: 109.783, lat: 28.383, description: "民族文化园区，展现湘西各民族文化，休闲观光佳选", recommend: 7 },
+{ name: "湘西龙山县太平山景区", type: "4A 级景区", address: "湖南省湘西州龙山县", lng: 109.483, lat: 29.433, description: "山地生态景区，太平山风光秀美，休闲观光佳选", recommend: 7 },
+{ name: "湘西凤凰县中华大熊猫苑", type: "4A 级景区", address: "湖南省湘西州凤凰县", lng: 109.433, lat: 27.833, description: "大熊猫饲养与观赏景区，亲子科普佳选", recommend: 8 },
+{ name: "湘西泸溪县沅水画壁景区", type: "4A 级景区", address: "湖南省湘西州泸溪县", lng: 109.933, lat: 28.433, description: "沅江沿岸景区，石壁风光秀美，休闲观光佳选", recommend: 8 },
+{ name: "湘西州德夯大峡谷景区（配套区）", type: "4A 级景区", address: "湖南省湘西州吉首市", lng: 109.633, lat: 28.233, description: "德夯大峡谷配套景区，自然风光雄奇", recommend: 9 },
+];
         
         const ancientData = [
-          /* ===== 古遗址 ===== */
+           /* ===== 古遗址 ===== */
 
 {
   name: "曲回寺石像冢",
@@ -18515,6 +18679,47 @@
 }
         ];
         
+// ===== DeepSeek API 核心配置 =====
+const DEEPSEEK_API_KEY = "sk-0745adefa4484d49bc14aea1c71b338b"; // 替换为真实Key
+const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions";
+
+// 调用API获取回复
+async function getAiReply(question) {
+    // 显示加载中
+    const chatHistory = document.getElementById("aiChatHistory");
+    chatHistory.innerHTML += `<div style="color:#999;">AI正在思考...</div>`;
+    
+    try {
+        // 调用DeepSeek接口
+        const res = await fetch(DEEPSEEK_API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "deepseek-chat",
+                messages: [{role: "user", content: question}],
+                temperature: 0.7
+            })
+        });
+        
+        const data = await res.json();
+        const reply = data.choices[0]?.message?.content || "无法回答";
+        
+        // 替换加载提示为真实回复
+        chatHistory.innerHTML = chatHistory.innerHTML.replace(
+            /AI正在思考\.\.\./, 
+            `<strong>智能导游：</strong>${reply}`
+        );
+    } catch (err) {
+        chatHistory.innerHTML = chatHistory.innerHTML.replace(
+            /AI正在思考\.\.\./, 
+            `<strong>智能导游：</strong>出错了：${err.message}`
+        );
+    }
+}
+
         // 合并所有数据
         const allScenicData = [...scenicData5A, ...scenicData4A, ...ancientData];
         
@@ -18531,11 +18736,6 @@
         // DOM元素
         const loginContainer = document.getElementById('loginContainer');
         const mainInterface = document.getElementById('mainInterface');
-        const loginBtn = document.getElementById('loginBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const errorMessage = document.getElementById('errorMessage');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
         const searchInput = document.getElementById('searchInput');
         const searchBtn = document.getElementById('searchBtn');
         const searchResults = document.getElementById('searchResults');
@@ -18553,54 +18753,56 @@
         // 侧边栏切换相关DOM
         const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
+
         
-        // 登录功能
-        loginBtn.addEventListener('click', function() {
-            const username = usernameInput.value;
-            const password = passwordInput.value;
-            
-            if (username === 'tbbtz' && password === '123456') {
-                loginContainer.style.display = 'none';
-                mainInterface.style.display = 'flex';
-                document.getElementById('loggedInUser').textContent = username;
-                
-                initMap();
-                loadScenicData();
-                initSearchFunction();
-                initFilterFunction();
-            } else {
-                errorMessage.style.display = 'block';
-                usernameInput.style.borderColor = '#e74c3c';
-                passwordInput.style.borderColor = '#e74c3c';
-                
-                setTimeout(() => {
-                    errorMessage.style.display = 'none';
-                    usernameInput.style.borderColor = '#ddd';
-                    passwordInput.style.borderColor = '#ddd';
-                }, 3000);
-            }
-        });
         
-        // Enter键登录
-        passwordInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                loginBtn.click();
-            }
-        });
+        // 页面加载完成后直接初始化地图和数据（移除登录逻辑）
+        window.onload = function() {
+            initMap();
+            loadScenicData();
+            initSearchFunction();
+            initFilterFunction();
+            initSidebarToggle(); // 初始化侧边栏切换
+        }
+
+    
+    // ===== 新增：绑定AI提问按钮 =====
+    const sendBtn = document.getElementById("sendAiBtn");
+    const aiInput = document.getElementById("aiInput");
+    
+    // 点击发送
+    sendBtn.onclick = function() {
+        const question = aiInput.value.trim();
+        if (!question) return alert("请输入问题");
         
-        // 退出登录
-        logoutBtn.addEventListener('click', function() {
-            mainInterface.style.display = 'none';
-            loginContainer.style.display = 'flex';
-            usernameInput.value = '';
-            passwordInput.value = '';
-            
-            if (map) {
-                map.remove();
-                map = null;
-                markers = [];
-            }
-        });
+        // 显示用户问题
+        document.getElementById("aiChatHistory").innerHTML += 
+            `<div style="text-align:right; margin:8px 0;"><strong>你：</strong>${question}</div>`;
+        
+        // 清空输入框并调用API
+        aiInput.value = "";
+        getAiReply(question);
+    };
+    
+    // 回车发送
+    aiInput.onkeypress = function(e) {
+        if (e.key === "Enter") sendBtn.onclick();
+    };
+
+        // 侧边栏切换功能 - 核心修复
+        function initSidebarToggle() {
+            sidebarToggleBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+                // 触发地图重绘，确保尺寸适配
+                if (map) {
+                    setTimeout(() => {
+                        map.invalidateSize(); // 关键：通知leaflet地图尺寸变化
+                    }, 300); // 匹配侧边栏过渡动画时长
+                }
+                // 切换按钮图标
+                this.innerHTML = sidebar.classList.contains('hidden') ? '☰' : '✕';
+            });
+        }
         
         // 初始化地图
         function initMap() {
@@ -18614,6 +18816,7 @@
             
             // 比例尺
             L.control.scale({imperial: false, position: 'bottomleft'}).addTo(map);
+            
             
             // 标记点聚类
             markerClusters = L.markerClusterGroup({
@@ -18642,12 +18845,12 @@
             locateChinaBtn.addEventListener('click', () => map.setView([35.86166, 104.195397], 5));
         }
         
-        // 加载景区数据
+        // 加载景区数据 - 核心修复：4A/5A筛选逻辑
         function loadScenicData() {
             markerClusters.clearLayers();
             markers = [];
             
-            // 筛选数据 - 核心修改：精准区分各类型筛选
+            // 筛选数据 - 精准区分各类型
             const filteredData = allScenicData.filter(item => {
                 let typeMatch = false;
                 
@@ -18655,23 +18858,20 @@
                 if (currentFilter.types.includes('all')) {
                     typeMatch = true;
                 }
-                // 5A景区筛选：仅匹配5A级景区
+                // 5A景区筛选：严格匹配5A级景区
                 else if (currentFilter.types.includes('5A')) {
                     typeMatch = item.type === '5A级景区';
                 }
-                // 4A景区筛选：仅匹配4A级景区
+                // 4A景区筛选：严格匹配4A级景区
                 else if (currentFilter.types.includes('4A')) {
                     typeMatch = item.type === '4A级景区';
                 }
-                // 古建筛选：仅匹配ancientData中的数据（排除5A/4A）
+                // 古建筛选：匹配古遗址/古建筑类型
                 else if (currentFilter.types.includes('古建')) {
-                    // 判断是否是古建数据：不在5A/4A数组中即为古建数据
-                    const isIn5A = scenicData5A.some(d => d.name === item.name && d.address === item.address);
-                    const isIn4A = scenicData4A.some(d => d.name === item.name && d.address === item.address);
-                    typeMatch = !isIn5A && !isIn4A;
+                    typeMatch = item.type === '古遗址' || item.type === '古建筑';
                 }
                 
-                // 处理推荐度为字符串的情况（ancientData中recommend是字符串）
+                // 推荐度筛选（统一转为数字）
                 const itemRecommend = Number(item.recommend);
                 const recommendMatch = itemRecommend >= currentFilter.minRecommend;
                 
@@ -18691,7 +18891,7 @@
             });
         }
         
-        // 创建地图标记 - 核心修改：标记显示景区名称，悬停显示词条
+        // 创建地图标记
         function createMarker(item, index) {
             // 标记颜色
             let iconColor = '#1a6dcc';
@@ -18699,7 +18899,7 @@
             else if (item.type === '4A级景区') iconColor = '#4ecdc4';
             else iconColor = '#ffd166'; // 古建/近现代等统一用黄色
             
-            // 自定义标记：显示景区名称（替换原推荐度）
+            // 自定义标记：显示景区名称
             const customIcon = L.divIcon({
                 html: `
                     <div class="scenic-marker" style="background:${iconColor}">
@@ -18713,7 +18913,7 @@
             
             const marker = L.marker([item.lat, item.lng], {
                 icon: customIcon,
-                title: `${item.name} - ${item.type} (推荐度: ${item.recommend}/10)` // 悬停显示的词条
+                title: `${item.name} - ${item.type} (推荐度: ${item.recommend}/10)`
             });
             
             // 弹窗内容
@@ -18749,10 +18949,8 @@
             
             // 点击标记打开弹窗并获取天气信息
             marker.on('click', function() {
-                // 先打开弹窗
                 this.openPopup();
-                
-                // 延迟一小段时间确保弹窗已打开，然后获取天气信息
+                // 延迟获取天气确保弹窗加载完成
                 setTimeout(() => {
                     fetchWeatherForPopup(item.lng, item.lat, index);
                 }, 300);
@@ -18761,8 +18959,9 @@
             return marker;
         }
         
-        // 添加天气获取函数
+        // 获取天气信息（示例接口，需替换为有效key）
         function fetchWeatherForPopup(lng, lat, index) {
+            // 注意：此处高德天气API key为示例，需自行替换为有效key
             const weatherUrl = `https://restapi.amap.com/v3/weather/weatherInfo?key=013b634e19b63448bb98e068840f3091&output=JSON&extensions=base&location=${lng},${lat}`;
             
             fetch(weatherUrl)
@@ -18781,7 +18980,7 @@
                 });
         }
         
-        // 更新弹窗中的天气信息
+        // 更新弹窗天气信息
         function updateWeatherPopup(index, weather, errorMsg = null) {
             const weatherElement = document.getElementById(`weather-${index}`);
             if (!weatherElement) return;
@@ -18802,203 +19001,179 @@
                 '阴': '☁️',
                 '雨': '🌧️',
                 '雪': '❄️',
-                '雾': '🌫️',
-                '雷阵雨': '⛈️'
+                '雾': '🌫️'
             };
             
-            const weatherIcon = weatherIcons[weather.weather] || '🌤️';
-            
+            const weatherIcon = weatherIcons[weather.weather] || '❓';
             weatherElement.innerHTML = `
-                <div style="margin:10px 0; padding:10px; background:#f8f9fa; border-radius:5px; text-align:center;">
-                    <div style="font-size:16px; font-weight:bold; color:#2c3e50;">${weather.province} ${weather.city}</div>
-                    <div style="display:flex; align-items:center; justify-content:center; margin:5px 0;">
-                        <span style="font-size:24px; margin-right:10px;">${weatherIcon}</span>
-                        <span style="font-size:18px; font-weight:bold; color:#e74c3c;">${weather.temperature}°C</span>
+                <div style="margin:10px 0; text-align:center;">
+                    <div style="font-size:24px;">${weatherIcon}</div>
+                    <div style="font-size:14px; margin-top:5px;">${weather.province} ${weather.city}</div>
+                    <div style="font-size:12px; color:#666; margin-top:3px;">
+                        ${weather.weather} ${weather.temperature}℃ | 湿度${weather.humidity}% | 风向${weather.winddirection}${weather.windpower}级
                     </div>
-                    <div style="font-size:12px; color:#666;">${weather.weather} | 湿度 ${weather.humidity}%</div>
-                    <div style="font-size:12px; color:#666;">风向 ${weather.winddirection} 风力 ${weather.windpower}级</div>
-                    <div style="font-size:10px; color:#999; margin-top:5px;">更新时间: ${weather.reporttime}</div>
                 </div>
             `;
         }
         
         // 创建列表项
         function createListItem(item, index) {
-            const listItem = document.createElement('div');
-            listItem.className = 'scenic-item';
-            listItem.dataset.index = index;
+            const itemElement = document.createElement('div');
+            itemElement.className = 'scenic-item';
+            itemElement.setAttribute('data-index', index);
             
+            // 类型样式类
             let typeClass = '';
             if (item.type === '5A级景区') typeClass = 'type-5a';
             else if (item.type === '4A级景区') typeClass = 'type-4a';
             else typeClass = 'type-ancient';
             
-            listItem.innerHTML = `
+            itemElement.innerHTML = `
                 <h4>${item.name}</h4>
-                <div>
-                    <span class="scenic-type ${typeClass}">${item.type}</span>
-                    ${item.year ? `<span class="scenic-type" style="background:#d35400; color:white;">${item.year}</span>` : ''}
-                </div>
+                <span class="scenic-type ${typeClass}">${item.type}</span>
                 <div class="scenic-address">${item.address}</div>
                 <div class="scenic-description">${item.description}</div>
+                <div style="margin-top:8px; font-size:12px; color:#888;">推荐度: ${item.recommend}/10</div>
             `;
             
-            // 点击列表项定位到对应标记
-            listItem.addEventListener('click', function() {
+            // 点击列表项定位到地图标记
+            itemElement.addEventListener('click', function() {
                 const marker = markers[index];
                 map.setView([item.lat, item.lng], 12);
                 marker.openPopup();
             });
             
-            scenicListContainer.appendChild(listItem);
-        }
-        
-        // 初始化筛选功能
-        function initFilterFunction() {
-            // 类型筛选按钮事件
-            const filterButtons = typeFilters.querySelectorAll('.filter-btn');
-            filterButtons.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    // 切换active状态
-                    filterButtons.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // 更新筛选条件
-                    currentFilter.types = [this.dataset.type];
-                    
-                    // 重新加载数据
-                    loadScenicData();
-                });
-            });
-            
-            // 推荐度滑块事件
-            recommendSlider.addEventListener('input', function() {
-                const value = this.value;
-                sliderValue.textContent = value;
-                recommendValue.textContent = value;
-                currentFilter.minRecommend = Number(value);
-                
-                // 重新加载数据
-                loadScenicData();
-            });
+            scenicListContainer.appendChild(itemElement);
         }
         
         // 初始化搜索功能
         function initSearchFunction() {
-            // 搜索按钮点击事件
+            // 搜索按钮点击
             searchBtn.addEventListener('click', performSearch);
             
-            // 输入框回车事件
+            // 输入框回车搜索
             searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    performSearch();
-                }
-            });
-            
-            // 输入框输入事件（实时搜索）
-            searchInput.addEventListener('input', function() {
-                if (this.value.length > 0) {
-                    performSearch();
-                } else {
-                    searchResults.style.display = 'none';
-                }
+                if (e.key === 'Enter') performSearch();
             });
             
             // 点击页面其他区域关闭搜索结果
             document.addEventListener('click', function(e) {
-                if (!searchInput.contains(e.target) && !searchResults.contains(e.target) && !searchBtn.contains(e.target)) {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target) && e.target !== searchBtn) {
                     searchResults.style.display = 'none';
                 }
             });
-        }
-        
-        // 执行搜索
-        function performSearch() {
-            const searchTerm = searchInput.value.trim().toLowerCase();
-            searchResults.innerHTML = '';
             
-            if (searchTerm === '') {
-                searchResults.style.display = 'none';
-                return;
-            }
-            
-            // 筛选匹配的景区
-            const matchedItems = allScenicData.filter(item => {
-                return item.name.toLowerCase().includes(searchTerm) || 
-                       item.address.toLowerCase().includes(searchTerm) ||
-                       item.type.toLowerCase().includes(searchTerm);
-            });
-            
-            // 显示搜索结果
-            if (matchedItems.length > 0) {
-                matchedItems.forEach(item => {
+            // 执行搜索
+            function performSearch() {
+                const searchTerm = searchInput.value.trim().toLowerCase();
+                searchResults.style.display = 'block';
+                
+                if (!searchTerm) {
+                    searchResults.innerHTML = '<div class="no-results">请输入搜索关键词</div>';
+                    return;
+                }
+                
+                // 筛选匹配结果
+                const matchedResults = allScenicData.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm) || 
+                    item.address.toLowerCase().includes(searchTerm) ||
+                    item.description.toLowerCase().includes(searchTerm)
+                );
+                
+                if (matchedResults.length === 0) {
+                    searchResults.innerHTML = `
+                        <div class="no-results">未找到"${searchTerm}"相关结果</div>
+                        <div class="web-search-recommend" onclick="window.open('https://www.baidu.com/s?wd=${encodeURIComponent(searchTerm + ' 景区')}', '_blank')">
+                            <div class="recommend-title">
+                                <i>🔍</i> 全网搜索"${searchTerm}"相关景区
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 渲染搜索结果
+                searchResults.innerHTML = '';
+                matchedResults.forEach((item, index) => {
                     const resultItem = document.createElement('div');
                     resultItem.className = 'search-result-item';
                     resultItem.innerHTML = `
                         <h4>${item.name}</h4>
-                        <p>${item.address} | ${item.type}</p>
+                        <p>${item.address} | ${item.type} | 推荐度: ${item.recommend}/10</p>
                     `;
                     
                     // 点击搜索结果定位到地图
                     resultItem.addEventListener('click', function() {
                         map.setView([item.lat, item.lng], 12);
                         // 查找对应标记并打开弹窗
-                        const marker = markers.find(m => m.getLatLng().lat === item.lat && m.getLatLng().lng === item.lng);
-                        if (marker) marker.openPopup();
+                        const markerIndex = allScenicData.findIndex(d => d.name === item.name && d.address === item.address);
+                        if (markerIndex !== -1 && markers[markerIndex]) {
+                            markers[markerIndex].openPopup();
+                        }
                         searchResults.style.display = 'none';
                         searchInput.value = '';
                     });
                     
                     searchResults.appendChild(resultItem);
                 });
-            } else {
-                // 无结果提示
-                const noResult = document.createElement('div');
-                noResult.className = 'no-results';
-                noResult.textContent = '未找到匹配的景区，试试其他关键词吧';
-                searchResults.appendChild(noResult);
             }
-            
-            // 添加全网搜索推荐
-            const webSearch = document.createElement('div');
-            webSearch.className = 'web-search-recommend';
-            webSearch.innerHTML = `
-                <div class="recommend-title">
-                    <i>🔍</i> 全网搜索 "${searchTerm}" 相关景区信息
-                </div>
-            `;
-            webSearch.addEventListener('click', function() {
-                window.open(`https://www.baidu.com/s?wd=${encodeURIComponent(searchTerm + ' 景区')}`, '_blank');
-            });
-            searchResults.appendChild(webSearch);
-            
-            searchResults.style.display = 'block';
         }
-
-        // 侧边栏切换功能
-        sidebarToggleBtn.addEventListener('click', function() {
-            // 切换隐藏/显示状态
-            sidebar.classList.toggle('hidden');
+        
+        // 初始化筛选功能 - 核心修复：筛选逻辑
+        function initFilterFunction() {
+            // 类型筛选按钮
+            const filterButtons = typeFilters.querySelectorAll('.filter-btn');
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 重置active状态
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 更新筛选条件
+                    currentFilter.types = [this.getAttribute('data-type')];
+                    loadScenicData();
+                });
+            });
             
-            // 更新按钮图标
-            if (sidebar.classList.contains('hidden')) {
-                sidebarToggleBtn.textContent = '☚';
-                // 触发地图重绘，确保填充全屏
-                if (map) {
-                    setTimeout(() => {
-                        map.invalidateSize();
-                    }, 300);
+            // 推荐度滑块
+            recommendSlider.addEventListener('input', function() {
+                const value = this.value;
+                sliderValue.textContent = value;
+                recommendValue.textContent = value;
+                currentFilter.minRecommend = Number(value);
+                loadScenicData();
+            });
+        }
+        
+        // AI助手功能（占位）
+        document.getElementById('sendAiBtn').addEventListener('click', function() {
+            const input = document.getElementById('aiInput').value.trim();
+            if (!input) return;
+            
+            const chatHistory = document.getElementById('aiChatHistory');
+            // 添加用户消息
+            chatHistory.innerHTML += `<div style="margin:5px 0; text-align:right; color:#1a6dcc;"><strong>我:</strong> ${input}</div>`;
+            
+            // 模拟AI回复
+            setTimeout(() => {
+                let reply = `抱歉，我暂时无法回答"${input}"相关问题。您可以尝试搜索景区名称、地址或类型相关问题。`;
+                if (input.includes('故宫') || input.includes('紫禁城')) {
+                    reply = '故宫博物院位于北京中轴线中心，是明清两代的皇家宫殿，1987年被列为世界文化遗产，建议游玩时间3-4小时。';
+                } else if (input.includes('长城') || input.includes('八达岭')) {
+                    reply = '八达岭长城是明长城中保存最好的一段，海拔高达1015米，是万里长城的精华所在，建议避开节假日高峰。';
                 }
-            } else {
-                sidebarToggleBtn.textContent = '☰';
-                // 触发地图重绘
-                if (map) {
-                    setTimeout(() => {
-                        map.invalidateSize();
-                    }, 300);
-                }
+                
+                chatHistory.innerHTML += `<div style="margin:5px 0; text-align:left; color:#666;"><strong>智能导游:</strong> ${reply}</div>`;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }, 1000);
+            
+            document.getElementById('aiInput').value = '';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        });
+        
+        // Enter键发送AI提问
+        document.getElementById('aiInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('sendAiBtn').click();
             }
         });
-    </script>
-</body>
-</html>
