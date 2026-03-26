@@ -18894,23 +18894,74 @@ async function getAiReply(question) {
         }
         
 // 创建地图标记// 创建地图标记
+// 创建地图标记（带图片）
+// 创建地图标记（图片+文字）
+// 创建地图标记（图片在上，文字在下，透明底）
+// 创建地图标记（图片在上，文字在下，可换行）
 function createMarker(item, index) {
-    // 标记颜色
-    let iconColor = '#1a6dcc';
-    if (item.type === '5A级景区') iconColor = '#ff6b6b';
-    else if (item.type === '4A级景区') iconColor = '#4ecdc4';
-    else iconColor = '#ffd166';
+    // 获取图片地址
+    const imageUrl = item.image || '';
 
-    // 自定义标记：显示景区名称
-    const customIcon = L.divIcon({
-        html: `
-            <div class="scenic-marker" style="background:${iconColor}">
+    // 根据文字长度动态计算标记大小
+    const nameLength = item.name.length;
+    let markerWidth = 80;
+    let markerHeight = 85;
+
+    if (nameLength <= 4) {
+        markerWidth = 70;
+        markerHeight = 82;
+    } else if (nameLength <= 6) {
+        markerWidth = 80;
+        markerHeight = 85;
+    } else {
+        markerWidth = 90;
+        markerHeight = 90;
+    }
+
+    // 获取景区类型对应的样式
+    let typeClass = '';
+    let typeColor = '';
+    if (item.type === '5A级景区') {
+        typeClass = 'type-5a';
+        typeColor = '#ff6b6b';
+    } else if (item.type === '4A级景区') {
+        typeClass = 'type-4a';
+        typeColor = '#4ecdc4';
+    } else {
+        typeClass = 'type-ancient';
+        typeColor = '#ffd166';
+    }
+
+    // 创建自定义标记HTML
+    let markerHtml = '';
+    let iconSize = [markerWidth, markerHeight];
+    let iconAnchor = [markerWidth / 2, markerHeight - 5];
+
+    if (imageUrl && imageUrl.trim() !== '') {
+        // 有图片：正方形图片在上，可换行文字在下
+        markerHtml = `
+            <div class="scenic-marker-with-img ${typeClass}" style="width:${markerWidth}px">
+                <img src="${imageUrl}" class="marker-img" onerror="this.style.display='none'" alt="">
                 <span class="marker-text">${item.name}</span>
             </div>
-        `,
+        `;
+    } else {
+        // 无图片：只显示文字（带背景色，根据景区类型区分）
+        markerHtml = `
+            <div class="scenic-marker ${typeClass}" style="background:${typeColor}; width:${markerWidth - 10}px">
+                <span class="marker-text">${item.name}</span>
+            </div>
+        `;
+        iconSize = [markerWidth - 10, 50];
+        iconAnchor = [(markerWidth - 10) / 2, 25];
+    }
+
+    const customIcon = L.divIcon({
+        html: markerHtml,
         className: 'custom-marker',
-        iconSize: [100, 30],
-        iconAnchor: [50, 15]
+        iconSize: iconSize,
+        iconAnchor: iconAnchor,
+        popupAnchor: [0, -iconAnchor[1] + 5]
     });
 
     const marker = L.marker([item.lat, item.lng], {
@@ -18918,18 +18969,17 @@ function createMarker(item, index) {
         title: `${item.name} - ${item.type} (推荐度: ${item.recommend}/10)`
     });
 
-    // 构建弹窗内容
+    // 弹窗内容
     let popupContent = `
         <div class="custom-popup">
             <div class="popup-title">${item.name}</div>
-            <div class="popup-type ${item.type === '5A级景区' ? 'type-5a' : item.type === '4A级景区' ? 'type-4a' : 'type-ancient'}">${item.type}</div>
+            <div class="popup-type ${typeClass}">${item.type}</div>
     `;
 
-    // 如果有图片，添加图片栏
-    if (item.image && item.image.trim() !== '') {
+    if (imageUrl && imageUrl.trim() !== '') {
         popupContent += `
             <div class="popup-image">
-                <img src="${item.image}" alt="${item.name}" onerror="this.style.display='none'">
+                <img src="${imageUrl}" alt="${item.name}" onerror="this.style.display='none'">
             </div>
         `;
     }
@@ -18940,7 +18990,6 @@ function createMarker(item, index) {
         popupContent += `<div class="popup-year"><strong>年代:</strong> ${item.year}</div>`;
     }
 
-    // 添加天气信息占位符
     popupContent += `
             <div class="weather-info" id="weather-${index}">
                 <div style="margin:10px 0; text-align:center;">
@@ -18959,10 +19008,8 @@ function createMarker(item, index) {
 
     marker.bindPopup(popupContent);
 
-    // 点击标记打开弹窗并获取天气信息
     marker.on('click', function () {
         this.openPopup();
-        // 延迟获取天气确保弹窗加载完成
         setTimeout(() => {
             fetchWeatherForPopup(item.lng, item.lat, index);
         }, 300);
