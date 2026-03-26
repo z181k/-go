@@ -1,0 +1,930 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #333;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* ========== 侧边栏样式 - 核心修复滚动问题 ========== */
+.sidebar {
+    width: 380px;
+    background-color: #fff;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+    transition: width 0.3s ease;
+    flex-shrink: 0;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+.sidebar.hidden {
+    width: 0 !important;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    border-right: none;
+}
+
+/* 头部样式 */
+/* 头部样式 */
+.header {
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%);
+    color: white;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+    .header h1 {
+        font-size: 22px;
+        margin: 0;
+    }
+
+    .header p {
+        font-size: 12px;
+        opacity: 0.9;
+        margin: 5px 0 0 0;
+    }
+
+/* 移动端适配 */
+@media (max-width: 576px) {
+    .header {
+        padding: 12px 15px;
+    }
+
+        .header h1 {
+            font-size: 18px;
+        }
+
+        .header p {
+            font-size: 10px;
+        }
+
+        .header img {
+            height: 32px !important;
+        }
+}
+
+/* 主界面容器 - 关键：允许flex子元素收缩 */
+.main-interface {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 用户信息栏 - 固定不滚动 */
+.user-info {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.user-info span {
+    font-weight: bold;
+    color: #1a6dcc;
+}
+
+.logout-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.logout-btn:hover {
+    background-color: #c0392b;
+}
+
+/* 内容区域 - 主滚动区域 */
+.content {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* ========== AI助手样式 ========== */
+.ai-assistant-box {
+    margin-bottom: 15px;
+    border: 1px solid #1a6dcc;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.ai-header {
+    background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%);
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ai-status {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.ai-chat-history {
+    max-height: 100px;
+    overflow-y: auto;
+    padding: 8px 12px;
+    font-size: 12px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #eee;
+}
+
+.ai-chat-history .user-msg {
+    text-align: right;
+    margin: 6px 0;
+    color: #1a6dcc;
+}
+
+.ai-chat-history .ai-reply-msg {
+    margin: 6px 0;
+    color: #666;
+}
+
+.ai-chat-history .ai-thinking {
+    color: #999;
+    font-style: italic;
+}
+
+.ai-chat-history .welcome-msg {
+    color: #666;
+}
+
+.ai-input-area {
+    display: flex;
+    padding: 8px;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.ai-input {
+    flex: 1;
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    border-radius: 4px;
+    outline: none;
+    font-size: 12px;
+}
+
+.ai-input:focus {
+    border-color: #1a6dcc;
+}
+
+.ai-send-btn {
+    margin-left: 8px;
+    background: #1a6dcc;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.ai-send-btn:hover {
+    background: #0d4d9c;
+}
+
+/* ========== 搜索框样式 ========== */
+.search-box {
+    margin-bottom: 15px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 8px 12px;
+    padding-right: 35px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-box input:focus {
+    border-color: #1a6dcc;
+}
+
+.search-box button {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #1a6dcc;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.search-results {
+    position: absolute;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    z-index: 1000;
+    display: none;
+    top: 100%;
+    margin-top: 4px;
+}
+
+.search-result-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.search-result-item:hover {
+    background-color: #f5f9ff;
+    padding-left: 18px;
+}
+
+.search-result-item h4 {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #1a6dcc;
+}
+
+.search-result-item p {
+    font-size: 12px;
+    color: #666;
+}
+
+.no-results {
+    padding: 24px 15px;
+    text-align: center;
+    color: #666;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.web-search-recommend {
+    padding: 15px;
+    background: linear-gradient(135deg, #f0f8ff 0%, #e8f4f8 100%);
+    border-radius: 0 0 8px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.web-search-recommend:hover {
+    background: linear-gradient(135deg, #e8f4f8 0%, #d8eaf7 100%);
+}
+
+.web-search-recommend .recommend-title {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #1a6dcc;
+    font-weight: 500;
+}
+
+.web-search-recommend .recommend-title span {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background-color: #1a6dcc;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 12px;
+    margin-right: 8px;
+}
+
+/* ========== 筛选器样式 ========== */
+.filters {
+    margin-bottom: 15px;
+    flex-shrink: 0;
+}
+
+.filter-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.filter-title span {
+    font-size: 14px;
+}
+
+/* 筛选器选项 - 动态宽度，自动换行，无滚动条 */
+.filter-options {
+    display: flex;
+    flex-wrap: wrap; /* 自动换行 */
+    gap: 8px;
+    margin-bottom: 10px;
+    /* 移除固定高度和滚动条 */
+    max-height: none; /* 不限制高度 */
+    overflow-y: visible; /* 不显示滚动条 */
+}
+
+/* 筛选按钮样式优化 */
+.filter-btn {
+    padding: 5px 12px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+    flex-shrink: 0; /* 防止按钮被压缩 */
+    white-space: nowrap; /* 文字不换行 */
+}
+
+/* 按钮过多时的响应式处理 */
+@media (max-width: 576px) {
+    .filter-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+
+    .filter-options {
+        gap: 6px;
+    }
+}
+
+/* 如果需要限制最大行数，可以用这个替代 */
+.filter-options-limited {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    max-height: 120px; /* 限制最大高度，超出滚动 */
+    overflow-y: auto; /* 超出才滚动 */
+}
+
+/* 如果希望滚动条只在需要时出现，使用这个 */
+.filter-options-auto-scroll {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    max-height: 100px; /* 设置一个合理的高度 */
+    overflow-y: auto; /* 超出时出现滚动条 */
+}
+
+.filter-btn.active {
+    background-color: #1a6dcc;
+    color: white;
+    border-color: #1a6dcc;
+}
+
+.filter-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.filter-btn.active:hover {
+    background-color: #0d4d9c;
+}
+
+.recommend-filter {
+    margin-top: 10px;
+}
+
+.slider-container {
+    padding: 0 5px;
+}
+
+input[type="range"] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: #ddd;
+    border-radius: 2px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #1a6dcc;
+    cursor: pointer;
+    border: none;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    background: #0d4d9c;
+    transform: scale(1.1);
+}
+
+.slider-value {
+    text-align: center;
+    margin-top: 6px;
+    font-weight: bold;
+    color: #1a6dcc;
+    font-size: 12px;
+}
+
+/* ========== 景区列表样式 ========== */
+.scenic-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 150px;
+}
+
+.list-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #1a6dcc;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 5;
+    padding-top: 5px;
+}
+
+.list-title span:first-child {
+    font-size: 14px;
+}
+
+.list-title span:last-child {
+    color: #1a6dcc;
+    font-weight: bold;
+}
+
+.scenic-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.scenic-item:hover {
+    background-color: #f9f9f9;
+}
+
+.scenic-item h4 {
+    font-size: 13px;
+    margin-bottom: 5px;
+    color: #1a6dcc;
+}
+
+.scenic-type {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin-right: 6px;
+    margin-bottom: 4px;
+}
+
+.type-5a {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+.type-4a {
+    background-color: #4ecdc4;
+    color: white;
+}
+
+.type-ancient {
+    background-color: #ffd166;
+    color: #333;
+}
+
+.scenic-address {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.scenic-description {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ========== 地图容器样式 - 给版权栏留出空间 ========== */
+.map-container {
+    flex: 1 1 auto;
+    position: relative;
+    height: 100%;
+    width: 100%;
+    transition: all 0.3s ease;
+    min-width: 0;
+    /* 底部留出版权栏高度 */
+    padding-bottom: 32px;
+    box-sizing: border-box;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+    min-width: 0;
+}
+
+/* ========== 底部备案信息 - 半透明不遮挡 ========== */
+.footer {
+    width: 100%;
+    background: rgba(245, 245, 245, 0.88);
+    backdrop-filter: blur(4px);
+    text-align: center;
+    padding: 6px 12px;
+    font-size: 10px;
+    color: #666;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 998;
+    box-sizing: border-box;
+    border-top: 1px solid rgba(224, 224, 224, 0.6);
+}
+
+    .footer span {
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    .footer a {
+        color: #666;
+        text-decoration: none;
+        margin: 0 4px;
+    }
+
+        .footer a:hover {
+            color: #1a6dcc;
+            text-decoration: underline;
+        }
+
+/* 地图控件向上偏移 */
+.leaflet-control-scale {
+    margin-bottom: 35px !important;
+    margin-left: 20px !important;
+}
+
+.leaflet-control-attribution {
+    margin-bottom: 30px !important;
+    background: rgba(255, 255, 255, 0.7) !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+}
+
+/* 移动端适配 */
+@media (max-width: 992px) {
+    .map-container {
+        padding-bottom: 28px;
+    }
+
+    .footer {
+        padding: 4px 8px;
+        font-size: 9px;
+    }
+
+    .leaflet-control-scale {
+        margin-bottom: 30px !important;
+    }
+
+    .leaflet-control-attribution {
+        margin-bottom: 25px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .map-container {
+        padding-bottom: 24px;
+    }
+
+    .footer {
+        padding: 3px 6px;
+        font-size: 8px;
+    }
+
+        .footer span {
+            white-space: normal;
+            display: inline;
+        }
+}
+
+/* ========== 地图控件样式 ========== */
+.map-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-btn {
+    width: 40px;
+    height: 40px;
+    background-color: white;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.control-btn:hover {
+    background-color: #f5f5f5;
+    transform: translateY(-2px);
+}
+
+/* ========== 信息窗口样式 ========== */
+.custom-popup {
+    max-width: 280px;
+    min-width: 240px;
+}
+
+.popup-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #1a6dcc;
+}
+
+.popup-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-bottom: 8px;
+}
+
+.popup-address, .popup-year, .popup-description {
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.popup-year {
+    font-weight: bold;
+    color: #d35400;
+}
+
+.popup-description {
+    line-height: 1.4;
+    color: #666;
+}
+
+/* ========== 景区标记样式 ========== */
+.scenic-marker {
+    background: #1a6dcc;
+    min-width: 60px;
+    max-width: 100px;
+    height: 28px;
+    border-radius: 14px;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.marker-text {
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    text-align: center;
+}
+
+/* ========== 侧边栏切换按钮 ========== */
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    width: 40px;
+    height: 40px;
+    background-color: white;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 20px;
+    color: #333;
+    transition: all 0.2s;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: #f5f5f5;
+    transform: translateY(-2px);
+}
+
+/* ========== 底部备案信息 ========== */
+.footer {
+    width: 100%;
+    background: #f5f5f5;
+    text-align: right;
+    padding: 8px 30px 8px 0;
+    font-size: 11px;
+    color: #666;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 999;
+    box-sizing: border-box;
+    border-top: 1px solid #e0e0e0;
+}
+
+.footer a {
+    color: #666;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    color: #1a6dcc;
+    text-decoration: underline;
+}
+
+/* ========== 滚动条美化 ========== */
+.content::-webkit-scrollbar,
+.ai-chat-history::-webkit-scrollbar,
+.filter-options::-webkit-scrollbar,
+.scenic-list::-webkit-scrollbar,
+.search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.content::-webkit-scrollbar-track,
+.ai-chat-history::-webkit-scrollbar-track,
+.filter-options::-webkit-scrollbar-track,
+.scenic-list::-webkit-scrollbar-track,
+.search-results::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.content::-webkit-scrollbar-thumb,
+.ai-chat-history::-webkit-scrollbar-thumb,
+.filter-options::-webkit-scrollbar-thumb,
+.scenic-list::-webkit-scrollbar-thumb,
+.search-results::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.content::-webkit-scrollbar-thumb:hover,
+.ai-chat-history::-webkit-scrollbar-thumb:hover,
+.filter-options::-webkit-scrollbar-thumb:hover,
+.scenic-list::-webkit-scrollbar-thumb:hover,
+.search-results::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* ========== 响应式设计 ========== */
+@media (max-width: 992px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: 45%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .sidebar.hidden {
+        height: 0 !important;
+        border-bottom: none;
+    }
+    
+    .map-container {
+        height: 55%;
+        width: 100%;
+    }
+    
+    .sidebar-toggle-btn {
+        left: 10px;
+        top: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .sidebar {
+        height: 50%;
+    }
+    
+    .map-container {
+        height: 50%;
+    }
+    
+    .content {
+        padding: 12px;
+    }
+    
+    .header h1 {
+        font-size: 18px;
+    }
+    
+    .header p {
+        font-size: 11px;
+    }
+    
+    .filter-options {
+        justify-content: center;
+    }
+    
+    .footer {
+        padding: 5px 15px 5px 0;
+        font-size: 9px;
+    }
+    
+    .footer a {
+        display: inline-block;
+        margin: 0 2px;
+    }
+}
+
+/* ========== Leaflet 地图控件兼容 ========== */
+.leaflet-control-scale {
+    margin-bottom: 20px !important;
+    margin-left: 20px !important;
+}
+
+.leaflet-popup-content {
+    margin: 12px 15px;
+    line-height: 1.4;
+}
+
+.marker-cluster {
+    background-clip: padding-box;
+    border-radius: 20px;
+}
+/* 强制隐藏 Leaflet 版权信息 */
+.leaflet-control-attribution {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+}
+
+.leaflet-control-container .leaflet-control-attribution {
+    display: none !important;
+}
