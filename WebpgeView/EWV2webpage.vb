@@ -6,6 +6,23 @@ Imports Microsoft.Web.WebView2.Core
 Public Class EWV2webpage
     ' 使用 Async 关键字修饰事件处理程序
     Private Async Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Dim ScreenHeight As Integer = Screen.PrimaryScreen.Bounds.Height
+        Dim ScreenWidth As Integer = Screen.PrimaryScreen.Bounds.Width
+        If ScreenWidth >= 4000 And ScreenHeight >= 2500 Then
+            Me.Size = New Size(3500, 2000)
+        ElseIf ScreenWidth >= 2500 And ScreenHeight >= 1400 Then
+            Me.Size = New Size(2000, 1200)
+        ElseIf ScreenWidth >= 1900 And ScreenHeight >= 1000 Then
+            Me.Size = New Size(1600, 900)
+        ElseIf ScreenWidth >= 1400 And ScreenHeight >= 900 Then
+            Me.Size = New Size(1150, 700)
+        ElseIf ScreenWidth >= 1100 And ScreenHeight >= 700 Then
+            Me.Size = New Size(950, 600)
+        ElseIf ScreenWidth >= 900 And ScreenHeight >= 700 Then
+            Me.Size = New Size(750, 600)
+        ElseIf ScreenWidth >= 799 And ScreenHeight >= 599 Then
+            Me.Size = New Size(600, 400)
+        End If
         Try
             ' 获取存放固定版本运行时的完整路径
             Dim runtimePath As String = System.IO.Path.Combine(Application.StartupPath, "WebView2Runtime")
@@ -74,7 +91,6 @@ Public Class EWV2webpage
             WebView21.Width = Me.Width - 75
             WebView21.Height = Me.Height - 192
         End If
-        Timer1.Start()
     End Sub
     Private Sub OnNewWindowRequested(sender As Object, e As CoreWebView2NewWindowRequestedEventArgs)
         e.Handled = True
@@ -83,24 +99,5 @@ Public Class EWV2webpage
 
     Private Sub WebView21_CoreWebView2InitializationCompleted(sender As Object, e As CoreWebView2InitializationCompletedEventArgs) Handles WebView21.CoreWebView2InitializationCompleted
         AddHandler WebView21.CoreWebView2.NewWindowRequested, AddressOf OnNewWindowRequested
-    End Sub
-
-    Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles Timer1.Tick
-        '
-        Dim ScreenHeight As Integer = Screen.PrimaryScreen.Bounds.Height
-        Dim ScreenWidth As Integer = Screen.PrimaryScreen.Bounds.Width
-        If ScreenWidth > 2500 And ScreenHeight > 1400 Then
-            Me.Size = New Size(2000, 1200)
-        ElseIf ScreenWidth > 2000 And ScreenHeight > 1000 Then
-            Me.Size = New Size(1400, 850)
-        ElseIf ScreenWidth > 1400 And ScreenHeight > 1000 Then
-            Me.Size = New Size(900, 700)
-        ElseIf ScreenWidth > 1000 And ScreenHeight > 700 Then
-            Me.Size = New Size(750, 500)
-        ElseIf ScreenWidth > 799 And ScreenHeight > 599 Then
-            Me.Size = New Size(600, 400)
-        End If
-        Me.FormBorderStyle = FormBorderStyle.Sizable
-        Panel1.Visible = False
     End Sub
 End Class

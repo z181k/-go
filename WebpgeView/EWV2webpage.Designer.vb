@@ -22,11 +22,8 @@ Partial Class EWV2webpage
     '不要使用代码编辑器修改它。
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Me.components = New System.ComponentModel.Container()
         Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(EWV2webpage))
         Me.WebView21 = New Microsoft.Web.WebView2.WinForms.WebView2()
-        Me.Timer1 = New System.Windows.Forms.Timer(Me.components)
-        Me.Panel1 = New System.Windows.Forms.Panel()
         CType(Me.WebView21, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
@@ -38,42 +35,25 @@ Partial Class EWV2webpage
         Me.WebView21.Location = New System.Drawing.Point(0, 0)
         Me.WebView21.Margin = New System.Windows.Forms.Padding(6, 5, 6, 5)
         Me.WebView21.Name = "WebView21"
-        Me.WebView21.Size = New System.Drawing.Size(89, 15)
+        Me.WebView21.Size = New System.Drawing.Size(820, 388)
         Me.WebView21.TabIndex = 0
         Me.WebView21.ZoomFactor = 1.0R
-        '
-        'Timer1
-        '
-        Me.Timer1.Interval = 1000
-        '
-        'Panel1
-        '
-        Me.Panel1.BackColor = System.Drawing.Color.Silver
-        Me.Panel1.Location = New System.Drawing.Point(-2, -3)
-        Me.Panel1.Name = "Panel1"
-        Me.Panel1.Size = New System.Drawing.Size(91, 18)
-        Me.Panel1.TabIndex = 1
         '
         'EWV2webpage
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(11.0!, 21.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.BackColor = System.Drawing.Color.WhiteSmoke
-        Me.ClientSize = New System.Drawing.Size(87, 16)
-        Me.Controls.Add(Me.Panel1)
+        Me.BackColor = System.Drawing.Color.FromArgb(CType(CType(247, Byte), Integer), CType(CType(247, Byte), Integer), CType(CType(248, Byte), Integer))
+        Me.ClientSize = New System.Drawing.Size(820, 389)
         Me.Controls.Add(Me.WebView21)
-        Me.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.Margin = New System.Windows.Forms.Padding(6, 5, 6, 5)
         Me.Name = "EWV2webpage"
         Me.Text = "旅图 Go"
-        Me.TransparencyKey = System.Drawing.Color.Silver
         CType(Me.WebView21, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub
 
     Friend WithEvents WebView21 As Microsoft.Web.WebView2.WinForms.WebView2
-    Friend WithEvents Timer1 As Timer
-    Friend WithEvents Panel1 As Panel
 End Class
